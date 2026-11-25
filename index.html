@@ -1,0 +1,2827 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Biblioteca Inteligente | ITESCAM - Estructura de Datos</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        navy: {
+                            950: '#0a0f1d',
+                            900: '#0f172a',
+                            850: '#162238',
+                            800: '#1e3a8a',
+                            700: '#1d4ed8',
+                        },
+                        gold: {
+                            50: '#fffbeb',
+                            100: '#fef3c7',
+                            500: '#f59e0b',
+                            600: '#d97706',
+                            700: '#b45309',
+                        },
+                        royal: {
+                            50: '#f5f3ff',
+                            100: '#ede9fe',
+                            600: '#7c3aed',
+                            700: '#6d28d9',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+                        mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Estilos personalizados para barras de desplazamiento y accesibilidad */
+        ::-webkit-scrollbar {
+            width: 7px;
+            height: 7px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        .sidebar-transition {
+            transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        @keyframes slideInRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        .toast-enter {
+            animation: slideInRight 0.25s ease-out forwards;
+        }
+        /* Focus accesible con teclado */
+        :focus-visible {
+            outline: 2px solid #2563eb;
+            outline-offset: 2px;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans antialiased selection:bg-blue-600 selection:text-white">
+
+    <!-- Contenedor de Notificaciones Toast -->
+    <div id="toast-container" aria-live="polite" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none px-4 sm:px-0"></div>
+
+    <!-- Backdrop para menú móvil -->
+    <div id="sidebar-backdrop" onclick="toggleSidebar(false)" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-30 hidden lg:hidden" aria-hidden="true"></div>
+
+    <div class="min-h-screen flex">
+        <!-- BARRA LATERAL IZQUIERDA (Navegación Principal) -->
+        <aside id="sidebar" aria-label="Menú principal de navegación" class="fixed inset-y-0 left-0 z-40 w-72 bg-navy-900 text-slate-100 flex flex-col border-r border-slate-800 transform -translate-x-full lg:translate-x-0 sidebar-transition shadow-xl lg:shadow-none">
+            <!-- Logo e Identidad Institucional -->
+            <div class="p-5 border-b border-slate-800 bg-navy-950/60">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-navy-800 border border-blue-400/30 flex items-center justify-center shadow-md shrink-0">
+                            <!-- Icono Libro + Nodo SVG -->
+                            <svg class="w-6 h-6 text-amber-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <span class="text-[11px] font-bold uppercase tracking-wider text-amber-400 block">ITESCAM • TecNM</span>
+                            <h1 class="text-sm font-bold text-white leading-tight">Biblioteca Inteligente</h1>
+                        </div>
+                    </div>
+                    <button onclick="toggleSidebar(false)" aria-label="Cerrar menú lateral" class="lg:hidden p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+                <div class="mt-3 pt-2.5 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
+                    <span>Estructura de Datos</span>
+                    <span class="px-2 py-0.5 rounded-full bg-royal-600/20 text-purple-300 border border-purple-500/30 font-semibold">5° Sem • Grupo A</span>
+                </div>
+            </div>
+
+            <!-- Enlaces de Navegación por Módulos -->
+            <nav class="flex-1 overflow-y-auto py-4 px-3 space-y-1" id="nav-menu">
+                <button data-module="dashboard" onclick="navigateTo('dashboard')" class="nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all bg-blue-600 text-white shadow-sm">
+                    <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+                    <span>1. Panel Principal</span>
+                </button>
+
+                <button data-module="books" onclick="navigateTo('books')" class="nav-btn w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-800/80 hover:text-white transition-all">
+                    <span class="flex items-center gap-3">
+                        <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+                        <span>2. Gestión de Libros</span>
+                    </span>
+                    <span id="badge-books" class="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-blue-300 font-mono">0</span>
+                </button>
+
+                <button data-module="users" onclick="navigateTo('users')" class="nav-btn w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-800/80 hover:text-white transition-all">
+                    <span class="flex items-center gap-3">
+                        <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                        <span>3. Gestión de Usuarios</span>
+                    </span>
+                    <span id="badge-users" class="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-blue-300 font-mono">0</span>
+                </button>
+
+                <button data-module="loans" onclick="navigateTo('loans')" class="nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-800/80 hover:text-white transition-all">
+                    <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+                    <span>4. Gestión de Préstamos</span>
+                </button>
+
+                <button data-module="returns" onclick="navigateTo('returns')" class="nav-btn w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-800/80 hover:text-white transition-all">
+                    <span class="flex items-center gap-3">
+                        <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
+                        <span>5. Devoluciones</span>
+                    </span>
+                    <span id="badge-active-loans" class="text-xs px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-mono">0</span>
+                </button>
+
+                <button data-module="waitlist" onclick="navigateTo('waitlist')" class="nav-btn w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-800/80 hover:text-white transition-all">
+                    <span class="flex items-center gap-3">
+                        <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        <span>6. Lista de Espera (FIFO)</span>
+                    </span>
+                    <span id="badge-waitlist" class="text-xs px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-mono">0</span>
+                </button>
+
+                <button data-module="history" onclick="navigateTo('history')" class="nav-btn w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-800/80 hover:text-white transition-all">
+                    <span class="flex items-center gap-3">
+                        <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                        <span>7. Historial (Pila LIFO)</span>
+                    </span>
+                    <span id="badge-history" class="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 font-mono">0</span>
+                </button>
+
+                <button data-module="algorithms" onclick="navigateTo('algorithms')" class="nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-800/80 hover:text-white transition-all">
+                    <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    <span>8. Búsqueda y Ordenamiento</span>
+                </button>
+
+                <button data-module="academic" onclick="navigateTo('academic')" class="nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-800/80 hover:text-white transition-all">
+                    <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"/></svg>
+                    <span>9. Ficha Académica</span>
+                </button>
+            </nav>
+
+            <!-- Pie de barra lateral -->
+            <div class="p-4 border-t border-slate-800 bg-navy-950/40">
+                <div class="flex items-center justify-between text-xs text-slate-400">
+                    <span>Persistencia Local</span>
+                    <span class="flex items-center gap-1.5 text-emerald-400 font-medium">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Activa
+                    </span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- CONTENIDO PRINCIPAL -->
+        <div class="flex-1 lg:pl-72 flex flex-col min-w-0">
+            <!-- Barra Superior (Header) -->
+            <header class="sticky top-0 z-20 bg-white/95 backdrop-blur border-b border-slate-200 px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+                <div class="flex items-center gap-3 min-w-0">
+                    <button onclick="toggleSidebar(true)" aria-label="Abrir menú de navegación" class="lg:hidden p-2 rounded-lg text-slate-600 hover:bg-slate-100 border border-slate-200">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
+                    </button>
+                    <div class="min-w-0">
+                        <h2 id="header-module-title" class="text-base sm:text-lg font-bold text-navy-900 truncate">Panel Principal</h2>
+                        <p id="header-module-subtitle" class="text-xs text-slate-500 hidden sm:block truncate">Resumen general y estado en tiempo real de la biblioteca</p>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2 sm:gap-3 shrink-0">
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-blue-50 text-navy-800 border border-blue-200">
+                        <span class="w-2 h-2 rounded-full bg-blue-600"></span>
+                        <span class="hidden sm:inline">ITESCAM • Ingeniería en Informática</span>
+                        <span class="sm:hidden">ITESCAM</span>
+                    </span>
+                </div>
+            </header>
+
+            <!-- Área Dinámica de Módulos -->
+            <main class="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto space-y-6">
+
+                <!-- =========================================================
+                     MÓDULO 1: PANEL PRINCIPAL (DASHBOARD)
+                ========================================================= -->
+                <section id="module-dashboard" class="module-view space-y-6">
+                    <!-- 6 Tarjetas Estadísticas -->
+                    <div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-4">
+                        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-xs font-semibold text-slate-500">Total de Libros</span>
+                                <span class="p-2 rounded-lg bg-blue-50 text-blue-600">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+                                </span>
+                            </div>
+                            <p id="stat-total-books" class="text-2xl font-extrabold text-navy-900">0</p>
+                            <span class="text-[11px] text-slate-400">Nodos en Lista Enlazada</span>
+                        </div>
+
+                        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-xs font-semibold text-slate-500">Disponibles</span>
+                                <span class="p-2 rounded-lg bg-emerald-50 text-emerald-600">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                </span>
+                            </div>
+                            <p id="stat-available-books" class="text-2xl font-extrabold text-emerald-600">0</p>
+                            <span class="text-[11px] text-slate-400">Listos para préstamo</span>
+                        </div>
+
+                        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-xs font-semibold text-slate-500">Prestados</span>
+                                <span class="p-2 rounded-lg bg-amber-50 text-amber-600">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+                                </span>
+                            </div>
+                            <p id="stat-loaned-books" class="text-2xl font-extrabold text-amber-600">0</p>
+                            <span class="text-[11px] text-slate-400">En circulación actual</span>
+                        </div>
+
+                        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-xs font-semibold text-slate-500">Usuarios</span>
+                                <span class="p-2 rounded-lg bg-indigo-50 text-indigo-600">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                                </span>
+                            </div>
+                            <p id="stat-total-users" class="text-2xl font-extrabold text-navy-900">0</p>
+                            <span class="text-[11px] text-slate-400">Padrón registrado</span>
+                        </div>
+
+                        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-xs font-semibold text-slate-500">Préstamos Activos</span>
+                                <span class="p-2 rounded-lg bg-sky-50 text-sky-600">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                                </span>
+                            </div>
+                            <p id="stat-active-loans" class="text-2xl font-extrabold text-sky-700">0</p>
+                            <span class="text-[11px] text-slate-400">Pendientes de entrega</span>
+                        </div>
+
+                        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-xs font-semibold text-slate-500">En Lista Espera</span>
+                                <span class="p-2 rounded-lg bg-purple-50 text-royal-600">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                </span>
+                            </div>
+                            <p id="stat-waitlist-count" class="text-2xl font-extrabold text-royal-600">0</p>
+                            <span class="text-[11px] text-slate-400">Turnos en Colas FIFO</span>
+                        </div>
+                    </div>
+
+                    <!-- Accesos Rápidos -->
+                    <div class="bg-gradient-to-r from-navy-900 via-navy-850 to-navy-800 rounded-2xl p-5 text-white flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm">
+                        <div>
+                            <span class="text-xs font-bold uppercase tracking-wider text-amber-400">Operación Rápida Bibliotecaria</span>
+                            <h3 class="text-lg font-bold mt-0.5">Gestiona el catálogo y circulación en un clic</h3>
+                            <p class="text-xs text-slate-300 mt-1">Todas las operaciones actualizan automáticamente las listas enlazadas, colas FIFO y la pila de auditoría LIFO.</p>
+                        </div>
+                        <div class="flex flex-wrap gap-2.5 shrink-0">
+                            <button onclick="navigateTo('books'); openBookModal();" class="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition shadow-xs">+ Registrar Libro</button>
+                            <button onclick="navigateTo('loans')" class="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-navy-950 text-xs font-bold transition shadow-xs">Nuevo Préstamo</button>
+                            <button onclick="navigateTo('returns')" class="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/20 text-xs font-semibold transition">Registrar Devolución</button>
+                        </div>
+                    </div>
+
+                    <!-- Grid de Resumen: Préstamos Recientes, Devoluciones, Mayor Demanda y Listas de Espera -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <!-- Préstamos Recientes -->
+                        <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-2xs">
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="text-sm font-bold text-navy-900 flex items-center gap-2">
+                                    <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+                                    Préstamos Recientes
+                                </h3>
+                                <button onclick="navigateTo('returns')" class="text-xs font-semibold text-blue-600 hover:underline">Ver todos →</button>
+                            </div>
+                            <div id="dash-recent-loans" class="space-y-2.5"></div>
+                        </div>
+
+                        <!-- Devoluciones Recientes -->
+                        <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-2xs">
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="text-sm font-bold text-navy-900 flex items-center gap-2">
+                                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                                    Devoluciones Recientes
+                                </h3>
+                                <button onclick="navigateTo('history')" class="text-xs font-semibold text-blue-600 hover:underline">Ver historial →</button>
+                            </div>
+                            <div id="dash-recent-returns" class="space-y-2.5"></div>
+                        </div>
+
+                        <!-- Libros con Mayor Demanda -->
+                        <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-2xs">
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="text-sm font-bold text-navy-900 flex items-center gap-2">
+                                    <span class="w-2.5 h-2.5 rounded-full bg-blue-600"></span>
+                                    Libros con Mayor Demanda
+                                </h3>
+                                <span class="text-xs text-slate-400">Por préstamos + cola</span>
+                            </div>
+                            <div id="dash-top-books" class="space-y-2.5"></div>
+                        </div>
+
+                        <!-- Libros con Usuarios en Lista de Espera -->
+                        <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-2xs">
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="text-sm font-bold text-navy-900 flex items-center gap-2">
+                                    <span class="w-2.5 h-2.5 rounded-full bg-royal-600"></span>
+                                    Libros con Lista de Espera (FIFO)
+                                </h3>
+                                <button onclick="navigateTo('waitlist')" class="text-xs font-semibold text-royal-600 hover:underline">Gestionar colas →</button>
+                            </div>
+                            <div id="dash-waitlist-books" class="space-y-2.5"></div>
+                        </div>
+                    </div>
+
+                    <!-- Actividad Reciente (Tope de la Pila LIFO) -->
+                    <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-2xs">
+                        <div class="flex items-center justify-between mb-4">
+                            <div>
+                                <h3 class="text-sm font-bold text-navy-900">Actividad Reciente del Sistema (Tope Pila LIFO)</h3>
+                                <p class="text-xs text-slate-500">Últimas 5 operaciones registradas en orden cronológico inverso</p>
+                            </div>
+                            <button onclick="navigateTo('history')" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 transition">Abrir Pila Completa</button>
+                        </div>
+                        <div id="dash-activity-feed" class="divide-y divide-slate-100"></div>
+                    </div>
+                </section>
+
+                <!-- =========================================================
+                     MÓDULO 2: GESTIÓN DE LIBROS (LISTA ENLAZADA)
+                ========================================================= -->
+                <section id="module-books" class="module-view hidden space-y-6">
+                    <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-2xs space-y-4">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                            <div>
+                                <span class="text-xs font-bold uppercase tracking-wider text-blue-600">Estructura: Lista Enlazada Simple</span>
+                                <h3 class="text-lg font-bold text-navy-900">Catálogo General de Libros</h3>
+                            </div>
+                            <button onclick="openBookModal()" class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold shadow-xs transition">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                                <span>Registrar Nuevo Libro</span>
+                            </button>
+                        </div>
+
+                        <!-- Barra de Búsqueda, Filtros y Ordenamiento -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-2">
+                            <div class="relative">
+                                <input type="text" id="books-search" oninput="renderBooksTable()" placeholder="Buscar título, autor o ISBN..." class="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-slate-300 focus:border-blue-600 focus:outline-none">
+                                <svg class="w-4 h-4 text-slate-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                            </div>
+
+                            <select id="books-filter-status" onchange="renderBooksTable()" aria-label="Filtrar por estado" class="px-3 py-2 text-sm rounded-xl border border-slate-300 bg-white focus:border-blue-600 focus:outline-none">
+                                <option value="all">Todos los estados</option>
+                                <option value="Disponible">Disponible</option>
+                                <option value="Prestado">Prestado</option>
+                            </select>
+
+                            <select id="books-filter-category" onchange="renderBooksTable()" aria-label="Filtrar por categoría" class="px-3 py-2 text-sm rounded-xl border border-slate-300 bg-white focus:border-blue-600 focus:outline-none">
+                                <option value="all">Todas las categorías</option>
+                            </select>
+
+                            <select id="books-sort" onchange="renderBooksTable()" aria-label="Ordenar libros" class="px-3 py-2 text-sm rounded-xl border border-slate-300 bg-white focus:border-blue-600 focus:outline-none">
+                                <option value="default">Orden de Lista Enlazada</option>
+                                <option value="title-asc">Título (A - Z)</option>
+                                <option value="title-desc">Título (Z - A)</option>
+                                <option value="author-asc">Autor (A - Z)</option>
+                                <option value="isbn-asc">ISBN (Ascendente)</option>
+                                <option value="year-desc">Año (Más reciente)</option>
+                                <option value="year-asc">Año (Más antiguo)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Tabla Responsiva de Libros -->
+                    <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-2xs">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="bg-slate-50 border-b border-slate-200 text-xs font-bold uppercase tracking-wider text-slate-500">
+                                        <th class="py-3.5 px-4">Nodo / ISBN</th>
+                                        <th class="py-3.5 px-4">Título y Autor</th>
+                                        <th class="py-3.5 px-4 hidden md:table-cell">Categoría / Editorial</th>
+                                        <th class="py-3.5 px-4 hidden sm:table-cell">Año / Registro</th>
+                                        <th class="py-3.5 px-4">Estado</th>
+                                        <th class="py-3.5 px-4 text-right">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="books-table-body" class="divide-y divide-slate-100 text-sm"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- =========================================================
+                     MÓDULO 3: GESTIÓN DE USUARIOS (LISTA ENLAZADA)
+                ========================================================= -->
+                <section id="module-users" class="module-view hidden space-y-6">
+                    <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-2xs space-y-4">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                            <div>
+                                <span class="text-xs font-bold uppercase tracking-wider text-indigo-600">Estructura: Lista Enlazada de Usuarios</span>
+                                <h3 class="text-lg font-bold text-navy-900">Padrón de Usuarios y Membresías</h3>
+                            </div>
+                            <button onclick="openUserModal()" class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-navy-800 hover:bg-navy-700 text-white text-sm font-semibold shadow-xs transition">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>
+                                <span>Registrar Nuevo Usuario</span>
+                            </button>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+                            <div class="sm:col-span-2 relative">
+                                <input type="text" id="users-search" oninput="renderUsersTable()" placeholder="Buscar por nombre, matrícula o correo electrónico..." class="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-slate-300 focus:border-blue-600 focus:outline-none">
+                                <svg class="w-4 h-4 text-slate-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                            </div>
+                            <select id="users-filter-status" onchange="renderUsersTable()" aria-label="Filtrar por membresía" class="px-3 py-2 text-sm rounded-xl border border-slate-300 bg-white focus:border-blue-600 focus:outline-none">
+                                <option value="all">Todas las membresías</option>
+                                <option value="Activo">Activo</option>
+                                <option value="Suspendido">Suspendido</option>
+                                <option value="Inactivo">Inactivo</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-2xs">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="bg-slate-50 border-b border-slate-200 text-xs font-bold uppercase tracking-wider text-slate-500">
+                                        <th class="py-3.5 px-4">Matrícula</th>
+                                        <th class="py-3.5 px-4">Nombre y Contacto</th>
+                                        <th class="py-3.5 px-4 hidden md:table-cell">Tipo / Registro</th>
+                                        <th class="py-3.5 px-4">Membresía</th>
+                                        <th class="py-3.5 px-4 text-center">Préstamos Activos</th>
+                                        <th class="py-3.5 px-4 text-right">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="users-table-body" class="divide-y divide-slate-100 text-sm"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- =========================================================
+                     MÓDULO 4: GESTIÓN DE PRÉSTAMOS
+                ========================================================= -->
+                <section id="module-loans" class="module-view hidden space-y-6">
+                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                        <!-- Formulario Guiado de Préstamo -->
+                        <div class="lg:col-span-7 bg-white rounded-2xl border border-slate-200 p-6 shadow-2xs space-y-5">
+                            <div>
+                                <span class="text-xs font-bold uppercase tracking-wider text-blue-600">Flujo Controlado de Circulación</span>
+                                <h3 class="text-lg font-bold text-navy-900">Registrar Nuevo Préstamo</h3>
+                                <p class="text-xs text-slate-500 mt-1">Selecciona un usuario activo y un ejemplar. Si el libro ya está prestado, podrás encolar al usuario en su lista de espera FIFO.</p>
+                            </div>
+
+                            <form id="loan-form" onsubmit="handleCreateLoan(event)" class="space-y-4">
+                                <div>
+                                    <label for="loan-user-select" class="block text-xs font-bold text-slate-700 mb-1.5">1. Seleccionar Usuario *</label>
+                                    <select id="loan-user-select" required class="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 bg-white focus:border-blue-600 focus:outline-none"></select>
+                                </div>
+
+                                <div>
+                                    <label for="loan-book-select" class="block text-xs font-bold text-slate-700 mb-1.5">2. Seleccionar Libro *</label>
+                                    <select id="loan-book-select" onchange="checkSelectedBookAvailability()" required class="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 bg-white focus:border-blue-600 focus:outline-none"></select>
+                                </div>
+
+                                <!-- Alerta dinámica si el libro seleccionado está prestado -->
+                                <div id="loan-unavailable-box" class="hidden p-4 rounded-xl bg-amber-50 border border-amber-300 space-y-3">
+                                    <div class="flex items-start gap-2.5">
+                                        <svg class="w-5 h-5 text-amber-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                                        <div>
+                                            <h4 class="text-xs font-bold text-amber-900">Libro actualmente prestado</h4>
+                                            <p id="loan-unavailable-msg" class="text-xs text-amber-800 mt-0.5"></p>
+                                        </div>
+                                    </div>
+                                    <button type="button" onclick="enqueueFromLoanForm()" class="w-full py-2 px-3 rounded-lg bg-royal-600 hover:bg-royal-700 text-white text-xs font-semibold transition flex items-center justify-center gap-2">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                        <span>Agregar Usuario a la Lista de Espera (Cola FIFO)</span>
+                                    </button>
+                                </div>
+
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div>
+                                        <label for="loan-date" class="block text-xs font-bold text-slate-700 mb-1.5">3. Fecha de Préstamo *</label>
+                                        <input type="date" id="loan-date" required class="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:border-blue-600 focus:outline-none">
+                                    </div>
+                                    <div>
+                                        <label for="loan-due-date" class="block text-xs font-bold text-slate-700 mb-1.5">4. Fecha Límite de Devolución *</label>
+                                        <input type="date" id="loan-due-date" required class="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:border-blue-600 focus:outline-none">
+                                    </div>
+                                </div>
+
+                                <div class="pt-2">
+                                    <button type="submit" id="loan-submit-btn" class="w-full py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold shadow-sm transition">
+                                        Confirmar Préstamo y Actualizar Estado
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+
+                        <!-- Panel Lateral: Libros Disponibles Rápidos -->
+                        <div class="lg:col-span-5 bg-white rounded-2xl border border-slate-200 p-6 shadow-2xs space-y-4">
+                            <h3 class="text-sm font-bold text-navy-900 flex items-center justify-between">
+                                <span>Ejemplares Disponibles Ahora</span>
+                                <span id="loans-available-badge" class="px-2.5 py-0.5 rounded-full text-xs bg-emerald-100 text-emerald-700 font-semibold">0</span>
+                            </h3>
+                            <p class="text-xs text-slate-500">Haz clic en un ejemplar para preseleccionarlo en el formulario.</p>
+                            <div id="loans-quick-books" class="space-y-2.5 max-h-96 overflow-y-auto pr-1"></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- =========================================================
+                     MÓDULO 5: GESTIÓN DE DEVOLUCIONES
+                ========================================================= -->
+                <section id="module-returns" class="module-view hidden space-y-6">
+                    <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-2xs space-y-4">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                            <div>
+                                <span class="text-xs font-bold uppercase tracking-wider text-emerald-600">Control de Retorno y Puntualidad</span>
+                                <h3 class="text-lg font-bold text-navy-900">Libros Actualmente Prestados</h3>
+                            </div>
+                            <div class="relative w-full sm:w-80">
+                                <input type="text" id="returns-search" oninput="renderReturnsTable()" placeholder="Buscar usuario, título o ISBN..." class="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-slate-300 focus:border-blue-600 focus:outline-none">
+                                <svg class="w-4 h-4 text-slate-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-2xs">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="bg-slate-50 border-b border-slate-200 text-xs font-bold uppercase tracking-wider text-slate-500">
+                                        <th class="py-3.5 px-4">Libro / ISBN</th>
+                                        <th class="py-3.5 px-4">Usuario / Matrícula</th>
+                                        <th class="py-3.5 px-4 hidden sm:table-cell">Préstamo / Límite</th>
+                                        <th class="py-3.5 px-4">Plazo / Cola Espera</th>
+                                        <th class="py-3.5 px-4 text-right">Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="returns-table-body" class="divide-y divide-slate-100 text-sm"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- =========================================================
+                     MÓDULO 6: LISTA DE ESPERA (COLA FIFO)
+                ========================================================= -->
+                <section id="module-waitlist" class="module-view hidden space-y-6">
+                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                        <!-- Formulario para Encolar Usuario -->
+                        <div class="lg:col-span-4 bg-white rounded-2xl border border-slate-200 p-5 shadow-2xs space-y-4 h-fit">
+                            <div>
+                                <span class="text-xs font-bold uppercase tracking-wider text-royal-600">Estructura Cola (FIFO)</span>
+                                <h3 class="text-base font-bold text-navy-900">Agregar a Lista de Espera</h3>
+                                <p class="text-xs text-slate-500 mt-1">Primero en entrar, primero en ser atendido cuando el libro se devuelva.</p>
+                            </div>
+
+                            <form onsubmit="handleAddToWaitlist(event)" class="space-y-3.5">
+                                <div>
+                                    <label for="waitlist-book-select" class="block text-xs font-bold text-slate-700 mb-1">Libro Prestado *</label>
+                                    <select id="waitlist-book-select" required class="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 bg-white focus:border-royal-600 focus:outline-none"></select>
+                                </div>
+                                <div>
+                                    <label for="waitlist-user-select" class="block text-xs font-bold text-slate-700 mb-1">Usuario Solicitante *</label>
+                                    <select id="waitlist-user-select" required class="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 bg-white focus:border-royal-600 focus:outline-none"></select>
+                                </div>
+                                <button type="submit" class="w-full py-2.5 px-4 rounded-xl bg-royal-600 hover:bg-royal-700 text-white text-xs font-bold shadow-xs transition">
+                                    Encolar Usuario (Enqueue)
+                                </button>
+                            </form>
+                        </div>
+
+                        <!-- Visualización de Colas FIFO por Libro -->
+                        <div class="lg:col-span-8 space-y-4" id="waitlist-queues-container"></div>
+                    </div>
+                </section>
+
+                <!-- =========================================================
+                     MÓDULO 7: HISTORIAL DE OPERACIONES (PILA LIFO)
+                ========================================================= -->
+                <section id="module-history" class="module-view hidden space-y-6">
+                    <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-2xs space-y-4">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <div>
+                                <span class="text-xs font-bold uppercase tracking-wider text-purple-600">Estructura Pila (LIFO - Last In, First Out)</span>
+                                <h3 class="text-lg font-bold text-navy-900">Bitácora Cronológica Inversa de Operaciones</h3>
+                            </div>
+                            <span class="px-3 py-1 rounded-full text-xs font-mono font-bold bg-purple-100 text-royal-700 self-start">TOPE ARRIBA (Último movimiento)</span>
+                        </div>
+
+                        <!-- 4 Filtros Combinables -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
+                            <select id="history-filter-type" onchange="renderHistoryStack()" aria-label="Filtrar por tipo de operación" class="px-3 py-2 text-sm rounded-xl border border-slate-300 bg-white focus:border-blue-600 focus:outline-none">
+                                <option value="all">Todos los tipos</option>
+                                <option value="Préstamo">Préstamo</option>
+                                <option value="Devolución">Devolución</option>
+                                <option value="Registro">Registro</option>
+                                <option value="Modificación">Modificación</option>
+                                <option value="Eliminación">Eliminación</option>
+                                <option value="Cola FIFO">Cola FIFO</option>
+                            </select>
+
+                            <input type="date" id="history-filter-date" onchange="renderHistoryStack()" aria-label="Filtrar por fecha" class="px-3 py-2 text-sm rounded-xl border border-slate-300 focus:border-blue-600 focus:outline-none">
+
+                            <input type="text" id="history-filter-user" oninput="renderHistoryStack()" placeholder="Filtrar por usuario..." class="px-3 py-2 text-sm rounded-xl border border-slate-300 focus:border-blue-600 focus:outline-none">
+
+                            <input type="text" id="history-filter-book" oninput="renderHistoryStack()" placeholder="Filtrar por libro o ISBN..." class="px-3 py-2 text-sm rounded-xl border border-slate-300 focus:border-blue-600 focus:outline-none">
+                        </div>
+                    </div>
+
+                    <div id="history-stack-container" class="space-y-3"></div>
+                </section>
+
+                <!-- =========================================================
+                     MÓDULO 8: BÚSQUEDA, ORDENAMIENTO Y ESTRUCTURAS DE DATOS
+                ========================================================= -->
+                <section id="module-algorithms" class="module-view hidden space-y-6">
+                    <!-- Laboratorio Interactivo -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <!-- Laboratorio de Búsqueda -->
+                        <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-2xs space-y-4">
+                            <div>
+                                <span class="text-xs font-bold uppercase tracking-wider text-blue-600">Laboratorio Algorítmico</span>
+                                <h3 class="text-base font-bold text-navy-900">Algoritmos de Búsqueda (Lineal vs Binaria)</h3>
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div>
+                                    <label for="algo-search-type" class="block text-xs font-bold text-slate-700 mb-1">Algoritmo</label>
+                                    <select id="algo-search-type" class="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 bg-white">
+                                        <option value="linear">Búsqueda Lineal O(n)</option>
+                                        <option value="binary">Búsqueda Binaria O(log n)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="algo-search-field" class="block text-xs font-bold text-slate-700 mb-1">Criterio</label>
+                                    <select id="algo-search-field" class="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 bg-white">
+                                        <option value="title">Título</option>
+                                        <option value="author">Autor</option>
+                                        <option value="isbn">ISBN</option>
+                                        <option value="category">Categoría</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="flex gap-2">
+                                <input type="text" id="algo-search-query" placeholder="Escribe término a localizar..." class="flex-1 px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:border-blue-600 focus:outline-none">
+                                <button onclick="runSearchExperiment()" class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold transition">Ejecutar</button>
+                            </div>
+
+                            <div id="algo-search-output" class="p-4 rounded-xl bg-slate-900 text-slate-100 font-mono text-xs space-y-2 min-h-36">
+                                <p class="text-slate-400">// Selecciona un algoritmo, criterio y presiona Ejecutar para ver la traza de comparaciones.</p>
+                            </div>
+                        </div>
+
+                        <!-- Laboratorio de Ordenamiento -->
+                        <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-2xs space-y-4">
+                            <div>
+                                <span class="text-xs font-bold uppercase tracking-wider text-amber-600">Organización de Datos</span>
+                                <h3 class="text-base font-bold text-navy-900">Algoritmos de Ordenamiento</h3>
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div>
+                                    <label for="algo-sort-method" class="block text-xs font-bold text-slate-700 mb-1">Método</label>
+                                    <select id="algo-sort-method" class="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 bg-white">
+                                        <option value="quicksort">QuickSort O(n log n)</option>
+                                        <option value="insertion">Ordenamiento por Inserción O(n²)</option>
+                                        <option value="bubble">Ordenamiento Burbuja O(n²)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="algo-sort-criteria" class="block text-xs font-bold text-slate-700 mb-1">Criterio</label>
+                                    <select id="algo-sort-criteria" class="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 bg-white">
+                                        <option value="title-asc">Título (Ascendente A-Z)</option>
+                                        <option value="title-desc">Título (Descendente Z-A)</option>
+                                        <option value="author">Autor</option>
+                                        <option value="isbn">ISBN</option>
+                                        <option value="year">Año de Publicación</option>
+                                        <option value="status">Estado</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <button onclick="runSortExperiment()" class="w-full py-2 px-4 rounded-xl bg-amber-500 hover:bg-amber-600 text-navy-950 text-sm font-bold transition">
+                                Ordenar Nodos y Medir Pasos
+                            </button>
+
+                            <div id="algo-sort-output" class="p-4 rounded-xl bg-slate-900 text-slate-100 font-mono text-xs space-y-2 min-h-36 max-h-56 overflow-y-auto">
+                                <p class="text-slate-400">// Ejecuta el ordenamiento para observar el resultado ordenado y el conteo de operaciones.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sección Informativa: Estructuras de datos utilizadas -->
+                    <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-2xs space-y-5">
+                        <div class="border-b border-slate-200 pb-3">
+                            <h3 class="text-lg font-bold text-navy-900">Estructuras de datos utilizadas</h3>
+                            <p class="text-xs text-slate-500 mt-0.5">Fundamento teórico-práctico aplicado en la arquitectura del Sistema de Biblioteca Inteligente</p>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <div class="p-4 rounded-xl bg-blue-50/70 border border-blue-200 space-y-1.5">
+                                <h4 class="text-sm font-bold text-navy-900">1. Listas Enlazadas (Linked Lists)</h4>
+                                <p class="text-xs text-slate-600 leading-relaxed">Administran dinámicamente el catálogo de libros y el padrón de usuarios mediante nodos enlazados por referencias (<code class="font-mono text-blue-700">next</code>), permitiendo inserciones y bajas sin desplazar bloques de memoria.</p>
+                            </div>
+
+                            <div class="p-4 rounded-xl bg-purple-50/70 border border-purple-200 space-y-1.5">
+                                <h4 class="text-sm font-bold text-navy-900">2. Colas (Queues - FIFO)</h4>
+                                <p class="text-xs text-slate-600 leading-relaxed">Gestionan las listas de espera de libros prestados bajo el principio <em>First In, First Out</em>, asegurando equidad y respeto estricto al orden en que cada usuario solicitó el ejemplar.</p>
+                            </div>
+
+                            <div class="p-4 rounded-xl bg-amber-50/70 border border-amber-200 space-y-1.5">
+                                <h4 class="text-sm font-bold text-navy-900">3. Pilas (Stacks - LIFO)</h4>
+                                <p class="text-xs text-slate-600 leading-relaxed">Almacenan el historial de operaciones bajo el principio <em>Last In, First Out</em>, colocando la transacción más reciente en el tope para auditorías y revisiones inmediatas.</p>
+                            </div>
+
+                            <div class="p-4 rounded-xl bg-emerald-50/70 border border-emerald-200 space-y-1.5">
+                                <h4 class="text-sm font-bold text-navy-900">4. Algoritmos de Búsqueda</h4>
+                                <p class="text-xs text-slate-600 leading-relaxed">Combinan <strong>Búsqueda Lineal</strong> sobre listas dinámicas y <strong>Búsqueda Binaria</strong> (<code class="font-mono text-emerald-700">O(log n)</code>) sobre colecciones ordenadas para localizar libros y usuarios por múltiples atributos.</p>
+                            </div>
+
+                            <div class="p-4 rounded-xl bg-slate-100 border border-slate-300 space-y-1.5 md:col-span-2 lg:col-span-2">
+                                <h4 class="text-sm font-bold text-navy-900">5. Algoritmos de Ordenamiento</h4>
+                                <p class="text-xs text-slate-600 leading-relaxed">Implementan <strong>QuickSort</strong>, <strong>Inserción</strong> y <strong>Burbuja</strong> para reorganizar registros por título (A-Z / Z-A), autor, ISBN, año de publicación y estado, facilitando tanto la lectura humana como las búsquedas binarias.</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- =========================================================
+                     MÓDULO 9: SECCIÓN ACADÉMICA Y CONCLUSIÓN
+                ========================================================= -->
+                <section id="module-academic" class="module-view hidden space-y-6">
+                    <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-2xs">
+                        <div class="bg-gradient-to-r from-navy-900 to-navy-800 p-6 sm:p-8 text-white">
+                            <span class="text-xs font-bold uppercase tracking-widest text-amber-400">Tecnológico Nacional de México</span>
+                            <h3 class="text-xl sm:text-2xl font-extrabold mt-1">Instituto Tecnológico Superior de Calkiní, Campeche</h3>
+                            <p class="text-sm text-blue-200 mt-1">Proyecto Final de Asignatura • Ingeniería en Informática</p>
+                        </div>
+
+                        <div class="p-6 sm:p-8 space-y-6">
+                            <!-- Ficha de Datos Académicos -->
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
+                                    <span class="text-xs font-bold text-slate-400 uppercase">Institución</span>
+                                    <p class="text-sm font-bold text-navy-900 mt-1">Instituto Tecnológico Superior de Calkiní, Campeche (ITESCAM)</p>
+                                </div>
+                                <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
+                                    <span class="text-xs font-bold text-slate-400 uppercase">Carrera</span>
+                                    <p class="text-sm font-bold text-navy-900 mt-1">Ingeniería en Informática</p>
+                                </div>
+                                <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
+                                    <span class="text-xs font-bold text-slate-400 uppercase">Materia</span>
+                                    <p class="text-sm font-bold text-blue-700 mt-1">Estructura de Datos</p>
+                                </div>
+                                <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
+                                    <span class="text-xs font-bold text-slate-400 uppercase">Semestre y Grupo</span>
+                                    <p class="text-sm font-bold text-navy-900 mt-1">Quinto semestre • Grupo A</p>
+                                </div>
+                                <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
+                                    <span class="text-xs font-bold text-slate-400 uppercase">Docente</span>
+                                    <p class="text-sm font-bold text-royal-700 mt-1">Leticia Díaz Alarcón</p>
+                                </div>
+                                <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
+                                    <span class="text-xs font-bold text-slate-400 uppercase">Proyecto</span>
+                                    <p class="text-sm font-bold text-amber-700 mt-1">Sistema de Biblioteca Inteligente</p>
+                                </div>
+                            </div>
+
+                            <!-- Integrantes del Equipo -->
+                            <div>
+                                <h4 class="text-sm font-bold text-navy-900 mb-3">Integrantes del Equipo de Desarrollo</h4>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
+                                    <div class="p-3 rounded-xl border border-slate-200 flex items-center justify-between">
+                                        <span class="font-semibold text-slate-800">Eliseo Benjamín Cauich Góngora</span>
+                                        <span class="font-mono font-bold text-blue-600">9635</span>
+                                    </div>
+                                    <div class="p-3 rounded-xl border border-slate-200 flex items-center justify-between">
+                                        <span class="font-semibold text-slate-800">Luis Gustavo Moo Pech</span>
+                                        <span class="font-mono font-bold text-blue-600">9625</span>
+                                    </div>
+                                    <div class="p-3 rounded-xl border border-slate-200 flex items-center justify-between">
+                                        <span class="font-semibold text-slate-800">Mario Krushev Cardozo Pool</span>
+                                        <span class="font-mono font-bold text-blue-600">9528</span>
+                                    </div>
+                                    <div class="p-3 rounded-xl border border-slate-200 flex items-center justify-between">
+                                        <span class="font-semibold text-slate-800">Yader Oswaldo Calán Ceh</span>
+                                        <span class="font-mono font-bold text-blue-600">9609</span>
+                                    </div>
+                                    <div class="p-3 rounded-xl border border-slate-200 flex items-center justify-between">
+                                        <span class="font-semibold text-slate-800">Mariana Sarahi Haas Bacab</span>
+                                        <span class="font-mono font-bold text-blue-600">9651</span>
+                                    </div>
+                                    <div class="p-3 rounded-xl border border-slate-200 flex items-center justify-between">
+                                        <span class="font-semibold text-slate-800">Carlos Teogonsalo Aké Gómez</span>
+                                        <span class="font-mono font-bold text-blue-600">9671</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Conclusión Académica -->
+                            <div class="p-5 rounded-2xl bg-blue-50/80 border border-blue-200 space-y-2">
+                                <h4 class="text-base font-bold text-navy-900">Conclusión del Proyecto</h4>
+                                <p class="text-sm text-slate-700 leading-relaxed">
+                                    El desarrollo del <strong>Sistema de Biblioteca Inteligente</strong> demuestra cómo la aplicación práctica de <strong>listas enlazadas, colas (FIFO), pilas (LIFO), algoritmos de búsqueda y algoritmos de ordenamiento</strong> transforma y optimiza la gestión bibliotecaria. Estas estructuras permiten almacenar dinámicamente libros y usuarios sin desperdicio de memoria, garantizar turnos justos mediante listas de espera ordenadas, mantener auditorías cronológicas precisas de cada movimiento y recuperar información en tiempos mínimos, brindando una solución escalable, confiable y orientada a las necesidades reales de una institución educativa.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+            </main>
+        </div>
+    </div>
+
+    <!-- =====================================================================
+         VENTANAS MODALES ACCESIBLES
+    ===================================================================== -->
+
+    <!-- Modal 1: Registrar / Editar Libro -->
+    <div id="book-modal" role="dialog" aria-modal="true" aria-labelledby="book-modal-title" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+        <div class="bg-white rounded-2xl border border-slate-200 max-w-lg w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between border-b border-slate-200 pb-3">
+                <h3 id="book-modal-title" class="text-base font-bold text-navy-900">Registrar Nuevo Libro</h3>
+                <button onclick="closeModal('book-modal')" aria-label="Cerrar modal" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100">✕</button>
+            </div>
+            <form id="book-form" onsubmit="handleSaveBook(event)" class="space-y-3.5">
+                <input type="hidden" id="book-edit-original-isbn">
+                <div>
+                    <label for="book-title-input" class="block text-xs font-bold text-slate-700 mb-1">Título del Libro *</label>
+                    <input type="text" id="book-title-input" required placeholder="Ej. Estructuras de Datos y Algoritmos" class="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:border-blue-600 focus:outline-none">
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label for="book-author-input" class="block text-xs font-bold text-slate-700 mb-1">Autor *</label>
+                        <input type="text" id="book-author-input" required placeholder="Ej. Mark Allen Weiss" class="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:border-blue-600 focus:outline-none">
+                    </div>
+                    <div>
+                        <label for="book-isbn-input" class="block text-xs font-bold text-slate-700 mb-1">ISBN *</label>
+                        <input type="text" id="book-isbn-input" required placeholder="Ej. 978-0133404180" class="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 font-mono focus:border-blue-600 focus:outline-none">
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                        <label for="book-category-input" class="block text-xs font-bold text-slate-700 mb-1">Categoría *</label>
+                        <input type="text" id="book-category-input" required placeholder="Ej. Computación" class="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:border-blue-600 focus:outline-none">
+                    </div>
+                    <div>
+                        <label for="book-year-input" class="block text-xs font-bold text-slate-700 mb-1">Año *</label>
+                        <input type="number" id="book-year-input" required min="1450" max="2030" placeholder="2023" class="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:border-blue-600 focus:outline-none">
+                    </div>
+                    <div>
+                        <label for="book-publisher-input" class="block text-xs font-bold text-slate-700 mb-1">Editorial *</label>
+                        <input type="text" id="book-publisher-input" required placeholder="Ej. Pearson" class="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:border-blue-600 focus:outline-none">
+                    </div>
+                </div>
+                <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                    <button type="button" onclick="closeModal('book-modal')" class="px-4 py-2 rounded-xl text-xs font-semibold border border-slate-300 text-slate-700 hover:bg-slate-50">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white">Guardar Libro</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal 2: Registrar / Editar Usuario -->
+    <div id="user-modal" role="dialog" aria-modal="true" aria-labelledby="user-modal-title" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+        <div class="bg-white rounded-2xl border border-slate-200 max-w-lg w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between border-b border-slate-200 pb-3">
+                <h3 id="user-modal-title" class="text-base font-bold text-navy-900">Registrar Nuevo Usuario</h3>
+                <button onclick="closeModal('user-modal')" aria-label="Cerrar modal" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100">✕</button>
+            </div>
+            <form id="user-form" onsubmit="handleSaveUser(event)" class="space-y-3.5">
+                <input type="hidden" id="user-edit-original-id">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div class="sm:col-span-2">
+                        <label for="user-name-input" class="block text-xs font-bold text-slate-700 mb-1">Nombre Completo *</label>
+                        <input type="text" id="user-name-input" required placeholder="Ej. Mariana Sarahi Haas Bacab" class="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:border-blue-600 focus:outline-none">
+                    </div>
+                    <div>
+                        <label for="user-id-input" class="block text-xs font-bold text-slate-700 mb-1">Matrícula / ID *</label>
+                        <input type="text" id="user-id-input" required placeholder="Ej. 9651" class="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 font-mono focus:border-blue-600 focus:outline-none">
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label for="user-email-input" class="block text-xs font-bold text-slate-700 mb-1">Correo Electrónico *</label>
+                        <input type="email" id="user-email-input" required placeholder="usuario@itescam.edu.mx" class="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:border-blue-600 focus:outline-none">
+                    </div>
+                    <div>
+                        <label for="user-phone-input" class="block text-xs font-bold text-slate-700 mb-1">Teléfono *</label>
+                        <input type="tel" id="user-phone-input" required placeholder="9961002030" class="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 focus:border-blue-600 focus:outline-none">
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label for="user-type-input" class="block text-xs font-bold text-slate-700 mb-1">Tipo de Usuario *</label>
+                        <select id="user-type-input" class="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 bg-white">
+                            <option value="Estudiante">Estudiante</option>
+                            <option value="Docente">Docente</option>
+                            <option value="Investigador">Investigador</option>
+                            <option value="Externo">Externo</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="user-status-input" class="block text-xs font-bold text-slate-700 mb-1">Estado de Membresía *</label>
+                        <select id="user-status-input" class="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 bg-white">
+                            <option value="Activo">Activo</option>
+                            <option value="Suspendido">Suspendido</option>
+                            <option value="Inactivo">Inactivo</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                    <button type="button" onclick="closeModal('user-modal')" class="px-4 py-2 rounded-xl text-xs font-semibold border border-slate-300 text-slate-700 hover:bg-slate-50">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 rounded-xl text-xs font-bold bg-navy-800 hover:bg-navy-700 text-white">Guardar Usuario</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal 3: Consultar Préstamos Activos de un Usuario -->
+    <div id="user-loans-modal" role="dialog" aria-modal="true" aria-labelledby="user-loans-modal-title" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+        <div class="bg-white rounded-2xl border border-slate-200 max-w-lg w-full p-6 shadow-2xl space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-200 pb-3">
+                <h3 id="user-loans-modal-title" class="text-base font-bold text-navy-900">Préstamos del Usuario</h3>
+                <button onclick="closeModal('user-loans-modal')" aria-label="Cerrar modal" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100">✕</button>
+            </div>
+            <div id="user-loans-modal-body" class="space-y-2.5 max-h-80 overflow-y-auto"></div>
+            <div class="flex justify-end pt-2">
+                <button onclick="closeModal('user-loans-modal')" class="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-800">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 4: Confirmación de Eliminación / Acción Crítica -->
+    <div id="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="confirm-modal-title" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+        <div class="bg-white rounded-2xl border border-slate-200 max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div class="flex items-start gap-3">
+                <div class="p-2.5 rounded-xl bg-red-100 text-red-600 shrink-0">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                </div>
+                <div>
+                    <h3 id="confirm-modal-title" class="text-base font-bold text-navy-900">Confirmar Acción</h3>
+                    <p id="confirm-modal-msg" class="text-xs text-slate-600 mt-1 leading-relaxed"></p>
+                </div>
+            </div>
+            <div class="flex justify-end gap-2 pt-2">
+                <button onclick="closeModal('confirm-modal')" class="px-4 py-2 rounded-xl text-xs font-semibold border border-slate-300 text-slate-700 hover:bg-slate-50">Cancelar</button>
+                <button id="confirm-modal-action-btn" class="px-4 py-2 rounded-xl text-xs font-bold bg-red-600 hover:bg-red-700 text-white">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 5: Notificación de Cola FIFO tras Devolución -->
+    <div id="fifo-handover-modal" role="dialog" aria-modal="true" aria-labelledby="fifo-modal-title" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+        <div class="bg-white rounded-2xl border-2 border-royal-600 max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div class="flex items-start gap-3">
+                <div class="p-2.5 rounded-xl bg-purple-100 text-royal-600 shrink-0">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                </div>
+                <div>
+                    <span class="text-[11px] font-bold uppercase tracking-wider text-royal-600">Cola de Espera FIFO Detectada</span>
+                    <h3 id="fifo-modal-title" class="text-base font-bold text-navy-900">Siguiente Usuario en Turno</h3>
+                    <p id="fifo-modal-msg" class="text-xs text-slate-600 mt-1.5 leading-relaxed"></p>
+                </div>
+            </div>
+            <div class="flex flex-col sm:flex-row justify-end gap-2 pt-2">
+                <button onclick="closeModal('fifo-handover-modal')" class="px-4 py-2 rounded-xl text-xs font-semibold border border-slate-300 text-slate-700 hover:bg-slate-50">Dejar Disponible</button>
+                <button id="fifo-assign-now-btn" class="px-4 py-2 rounded-xl text-xs font-bold bg-royal-600 hover:bg-royal-700 text-white">Asignar Préstamo al #1</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- =====================================================================
+         JAVASCRIPT MODULAR: ESTRUCTURAS DE DATOS Y LÓGICA DEL SISTEMA
+    ===================================================================== -->
+    <script>
+        /**
+         * 1. IMPLEMENTACIÓN DE ESTRUCTURAS DE DATOS FUNDAMENTALES
+         */
+
+        // Nodo para Lista Enlazada
+        class ListNode {
+            constructor(data) {
+                this.data = data;
+                this.next = null;
+            }
+        }
+
+        // Lista Enlazada Simple (Para Libros y Usuarios)
+        class LinkedList {
+            constructor(keyField) {
+                this.head = null;
+                this.size = 0;
+                this.keyField = keyField; // 'isbn' para libros, 'id' para usuarios
+            }
+
+            // Insertar nodo al final O(n)
+            append(data) {
+                const newNode = new ListNode(data);
+                if (!this.head) {
+                    this.head = newNode;
+                } else {
+                    let current = this.head;
+                    while (current.next) {
+                        current = current.next;
+                    }
+                    current.next = newNode;
+                }
+                this.size++;
+                return newNode;
+            }
+
+            // Buscar nodo por clave única O(n)
+            findByKey(keyValue) {
+                let current = this.head;
+                const target = String(keyValue).trim().toLowerCase();
+                while (current) {
+                    if (String(current.data[this.keyField]).trim().toLowerCase() === target) {
+                        return current.data;
+                    }
+                    current = current.next;
+                }
+                return null;
+            }
+
+            // Actualizar nodo existente O(n)
+            updateByKey(keyValue, updatedFields) {
+                let current = this.head;
+                const target = String(keyValue).trim().toLowerCase();
+                while (current) {
+                    if (String(current.data[this.keyField]).trim().toLowerCase() === target) {
+                        current.data = { ...current.data, ...updatedFields };
+                        return true;
+                    }
+                    current = current.next;
+                }
+                return false;
+            }
+
+            // Eliminar nodo por clave O(n)
+            removeByKey(keyValue) {
+                if (!this.head) return false;
+                const target = String(keyValue).trim().toLowerCase();
+
+                if (String(this.head.data[this.keyField]).trim().toLowerCase() === target) {
+                    this.head = this.head.next;
+                    this.size--;
+                    return true;
+                }
+
+                let current = this.head;
+                while (current.next) {
+                    if (String(current.next.data[this.keyField]).trim().toLowerCase() === target) {
+                        current.next = current.next.next;
+                        this.size--;
+                        return true;
+                    }
+                    current = current.next;
+                }
+                return false;
+            }
+
+            // Convertir lista enlazada a arreglo para renderizado o algoritmos
+            toArray() {
+                const result = [];
+                let current = this.head;
+                while (current) {
+                    result.push(current.data);
+                    current = current.next;
+                }
+                return result;
+            }
+
+            // Reconstruir lista desde arreglo
+            fromArray(items) {
+                this.head = null;
+                this.size = 0;
+                items.forEach(item => this.append(item));
+            }
+        }
+
+        // Cola FIFO (First In, First Out) para Listas de Espera
+        class QueueFIFO {
+            constructor(items = []) {
+                this.items = [...items];
+            }
+
+            enqueue(entry) {
+                // Evitar duplicados del mismo usuario en la misma cola
+                const exists = this.items.some(item => item.userId === entry.userId);
+                if (exists) return false;
+                this.items.push(entry);
+                return true;
+            }
+
+            dequeue() {
+                if (this.isEmpty()) return null;
+                return this.items.shift();
+            }
+
+            peek() {
+                return this.isEmpty() ? null : this.items[0];
+            }
+
+            removeUser(userId) {
+                const initialLen = this.items.length;
+                this.items = this.items.filter(item => item.userId !== userId);
+                return this.items.length < initialLen;
+            }
+
+            isEmpty() {
+                return this.items.length === 0;
+            }
+
+            toArray() {
+                return [...this.items];
+            }
+        }
+
+        // Pila LIFO (Last In, First Out) para Historial de Operaciones
+        class StackLIFO {
+            constructor(items = []) {
+                this.items = [...items]; // Índice 0 = Tope de la pila (más reciente)
+            }
+
+            push(operation) {
+                this.items.unshift(operation);
+            }
+
+            pop() {
+                return this.items.length === 0 ? null : this.items.shift();
+            }
+
+            peek() {
+                return this.items.length === 0 ? null : this.items[0];
+            }
+
+            toArray() {
+                return [...this.items];
+            }
+        }
+
+        // Algoritmos de Búsqueda (Lineal y Binaria con traza)
+        const SearchAlgorithms = {
+            linearSearch(array, field, query) {
+                const steps = [];
+                const matches = [];
+                const q = query.trim().toLowerCase();
+
+                for (let i = 0; i < array.length; i++) {
+                    const val = String(array[i][field]).toLowerCase();
+                    const hit = val.includes(q);
+                    steps.push(`Paso ${i + 1}: Comparando índice [${i}] (${array[i][field]}) -> ${hit ? 'COINCIDE' : 'no coincide'}`);
+                    if (hit) matches.push(array[i]);
+                }
+                return { matches, comparisons: array.length, steps };
+            },
+
+            binarySearch(array, field, query) {
+                // La búsqueda binaria requiere el arreglo ordenado por el criterio
+                const sorted = [...array].sort((a, b) =>
+                    String(a[field]).localeCompare(String(b[field]), 'es', { sensitivity: 'base' })
+                );
+                const steps = [`Pre-requisito: Arreglo ordenado por "${field}" (${sorted.length} elementos).`];
+                const matches = [];
+                const q = query.trim().toLowerCase();
+                let low = 0;
+                let high = sorted.length - 1;
+                let comparisons = 0;
+
+                while (low <= high) {
+                    comparisons++;
+                    const mid = Math.floor((low + high) / 2);
+                    const midVal = String(sorted[mid][field]).toLowerCase();
+                    steps.push(`Comparación #${comparisons}: low=${low}, high=${high}, mid=${mid} -> "${sorted[mid][field]}"`);
+
+                    if (midVal === q || midVal.includes(q)) {
+                        matches.push(sorted[mid]);
+                        // Revisar vecinos inmediatos por si hay coincidencias parciales cercanas
+                        let left = mid - 1;
+                        while (left >= 0 && String(sorted[left][field]).toLowerCase().includes(q)) {
+                            matches.push(sorted[left--]);
+                        }
+                        let right = mid + 1;
+                        while (right < sorted.length && String(sorted[right][field]).toLowerCase().includes(q)) {
+                            matches.push(sorted[right++]);
+                        }
+                        break;
+                    } else if (midVal < q) {
+                        low = mid + 1;
+                    } else {
+                        high = mid - 1;
+                    }
+                }
+                return { matches, comparisons, steps };
+            }
+        };
+
+        // Algoritmos de Ordenamiento (QuickSort, Inserción, Burbuja)
+        const SortAlgorithms = {
+            compare(a, b, criteria) {
+                switch (criteria) {
+                    case 'title-asc': return a.title.localeCompare(b.title, 'es');
+                    case 'title-desc': return b.title.localeCompare(a.title, 'es');
+                    case 'author': return a.author.localeCompare(b.author, 'es');
+                    case 'isbn': return a.isbn.localeCompare(b.isbn, 'es');
+                    case 'year': return Number(b.year) - Number(a.year);
+                    case 'status': return a.status.localeCompare(b.status, 'es');
+                    default: return 0;
+                }
+            },
+
+            quickSort(array, criteria) {
+                let operations = 0;
+                const sort = (arr) => {
+                    if (arr.length <= 1) return arr;
+                    const pivot = arr[Math.floor(arr.length / 2)];
+                    const left = [];
+                    const middle = [];
+                    const right = [];
+                    for (const item of arr) {
+                        operations++;
+                        const cmp = this.compare(item, pivot, criteria);
+                        if (cmp < 0) left.push(item);
+                        else if (cmp > 0) right.push(item);
+                        else middle.push(item);
+                    }
+                    return [...sort(left), ...middle, ...sort(right)];
+                };
+                return { sorted: sort([...array]), operations };
+            },
+
+            insertionSort(array, criteria) {
+                const arr = [...array];
+                let operations = 0;
+                for (let i = 1; i < arr.length; i++) {
+                    const key = arr[i];
+                    let j = i - 1;
+                    while (j >= 0 && this.compare(arr[j], key, criteria) > 0) {
+                        operations++;
+                        arr[j + 1] = arr[j];
+                        j--;
+                    }
+                    operations++;
+                    arr[j + 1] = key;
+                }
+                return { sorted: arr, operations };
+            },
+
+            bubbleSort(array, criteria) {
+                const arr = [...array];
+                let operations = 0;
+                for (let i = 0; i < arr.length - 1; i++) {
+                    for (let j = 0; j < arr.length - i - 1; j++) {
+                        operations++;
+                        if (this.compare(arr[j], arr[j + 1], criteria) > 0) {
+                            [arr[j], arr[j + 1]] = [arr[j + 1], arr[j]];
+                        }
+                    }
+                }
+                return { sorted: arr, operations };
+            }
+        };
+
+        /**
+         * 2. ESTADO GLOBAL Y PERSISTENCIA EN LOCALSTORAGE
+         */
+        const STORAGE_KEY = 'itescam_biblioteca_inteligente_v1';
+
+        const booksList = new LinkedList('isbn');
+        const usersList = new LinkedList('id');
+        let loans = [];        // Préstamos activos e históricos
+        let returnsLog = [];   // Registro específico de devoluciones
+        let waitlists = {};    // Mapa { isbn: QueueFIFO }
+        let historyStack = new StackLIFO();
+
+        function getTodayStr(offsetDays = 0) {
+            const d = new Date();
+            d.setDate(d.getDate() + offsetDays);
+            return d.toISOString().split('T')[0];
+        }
+
+        function getNowDateTimeStr() {
+            const now = new Date();
+            const date = now.toISOString().split('T')[0];
+            const time = now.toTimeString().slice(0, 8);
+            return `${date} ${time}`;
+        }
+
+        function saveState() {
+            const serializedWaitlists = {};
+            Object.keys(waitlists).forEach(isbn => {
+                const q = waitlists[isbn].toArray();
+                if (q.length > 0) serializedWaitlists[isbn] = q;
+            });
+
+            const payload = {
+                books: booksList.toArray(),
+                users: usersList.toArray(),
+                loans,
+                returnsLog,
+                waitlists: serializedWaitlists,
+                history: historyStack.toArray()
+            };
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+        }
+
+        function loadInitialDemoData() {
+            const today = getTodayStr(0);
+            const past5 = getTodayStr(-5);
+            const past10 = getTodayStr(-10);
+            const past2 = getTodayStr(-2); // Vencido hace 2 días para probar retraso
+            const next7 = getTodayStr(7);
+
+            const demoBooks = [
+                {
+                    isbn: '978-0262046305',
+                    title: 'Introduction to Algorithms',
+                    author: 'Thomas H. Cormen',
+                    category: 'Algoritmos',
+                    year: 2022,
+                    publisher: 'MIT Press',
+                    status: 'Prestado',
+                    registeredAt: past10,
+                    loanCount: 4
+                },
+                {
+                    isbn: '978-0133404180',
+                    title: 'Data Structures and Algorithm Analysis in C++',
+                    author: 'Mark Allen Weiss',
+                    category: 'Estructura de Datos',
+                    year: 2013,
+                    publisher: 'Pearson',
+                    status: 'Prestado',
+                    registeredAt: past10,
+                    loanCount: 5
+                },
+                {
+                    isbn: '978-1118771334',
+                    title: 'Data Structures and Algorithms in Java',
+                    author: 'Michael T. Goodrich',
+                    category: 'Estructura de Datos',
+                    year: 2014,
+                    publisher: 'Wiley',
+                    status: 'Disponible',
+                    registeredAt: past10,
+                    loanCount: 3
+                },
+                {
+                    isbn: '978-0321573513',
+                    title: 'Algorithms (4th Edition)',
+                    author: 'Robert Sedgewick',
+                    category: 'Algoritmos',
+                    year: 2011,
+                    publisher: 'Addison-Wesley',
+                    status: 'Disponible',
+                    registeredAt: past5,
+                    loanCount: 2
+                },
+                {
+                    isbn: '978-0132350884',
+                    title: 'Clean Code: Manual de Estilo para el Desarrollo Ágil',
+                    author: 'Robert C. Martin',
+                    category: 'Ingeniería de Software',
+                    year: 2008,
+                    publisher: 'Prentice Hall',
+                    status: 'Disponible',
+                    registeredAt: past5,
+                    loanCount: 6
+                },
+                {
+                    isbn: '978-6070728792',
+                    title: 'Cien Años de Soledad',
+                    author: 'Gabriel García Márquez',
+                    category: 'Literatura',
+                    year: 1967,
+                    publisher: 'Diana',
+                    status: 'Disponible',
+                    registeredAt: past5,
+                    loanCount: 1
+                }
+            ];
+
+            const demoUsers = [
+                { id: '9625', name: 'Luis Gustavo Moo Pech', email: '9625@itescam.edu.mx', phone: '9961023456', type: 'Estudiante', status: 'Activo', registeredAt: past10 },
+                { id: '9635', name: 'Eliseo Benjamín Cauich Góngora', email: '9635@itescam.edu.mx', phone: '9961087654', type: 'Estudiante', status: 'Activo', registeredAt: past10 },
+                { id: '9528', name: 'Mario Krushev Cardozo Pool', email: '9528@itescam.edu.mx', phone: '9961045678', type: 'Estudiante', status: 'Activo', registeredAt: past10 },
+                { id: '9609', name: 'Yader Oswaldo Calán Ceh', email: '9609@itescam.edu.mx', phone: '9961098765', type: 'Estudiante', status: 'Activo', registeredAt: past10 },
+                { id: '9651', name: 'Mariana Sarahi Haas Bacab', email: '9651@itescam.edu.mx', phone: '9961032145', type: 'Estudiante', status: 'Activo', registeredAt: past10 },
+                { id: '9671', name: 'Carlos Teogonsalo Aké Gómez', email: '9671@itescam.edu.mx', phone: '9961065432', type: 'Estudiante', status: 'Activo', registeredAt: past10 },
+                { id: 'DOC-01', name: 'Leticia Díaz Alarcón', email: 'ldiaz@itescam.edu.mx', phone: '9961001122', type: 'Docente', status: 'Activo', registeredAt: past10 }
+            ];
+
+            booksList.fromArray(demoBooks);
+            usersList.fromArray(demoUsers);
+
+            loans = [
+                {
+                    id: 'PREST-1001',
+                    isbn: '978-0133404180',
+                    bookTitle: 'Data Structures and Algorithm Analysis in C++',
+                    userId: '9625',
+                    userName: 'Luis Gustavo Moo Pech',
+                    loanDate: past5,
+                    dueDate: next7,
+                    returnDate: null,
+                    status: 'Activo',
+                    punctuality: null
+                },
+                {
+                    id: 'PREST-1002',
+                    isbn: '978-0262046305',
+                    bookTitle: 'Introduction to Algorithms',
+                    userId: '9635',
+                    userName: 'Eliseo Benjamín Cauich Góngora',
+                    loanDate: past10,
+                    dueDate: past2, // Vencido para probar devolución con retraso
+                    returnDate: null,
+                    status: 'Activo',
+                    punctuality: null
+                },
+                {
+                    id: 'PREST-1000',
+                    isbn: '978-0132350884',
+                    bookTitle: 'Clean Code: Manual de Estilo para el Desarrollo Ágil',
+                    userId: '9651',
+                    userName: 'Mariana Sarahi Haas Bacab',
+                    loanDate: past10,
+                    dueDate: past2,
+                    returnDate: past5,
+                    status: 'Devuelto',
+                    punctuality: 'A tiempo'
+                }
+            ];
+
+            returnsLog = [
+                {
+                    loanId: 'PREST-1000',
+                    isbn: '978-0132350884',
+                    bookTitle: 'Clean Code: Manual de Estilo para el Desarrollo Ágil',
+                    userId: '9651',
+                    userName: 'Mariana Sarahi Haas Bacab',
+                    dueDate: past2,
+                    returnDate: past5,
+                    punctuality: 'A tiempo'
+                }
+            ];
+
+            waitlists = {
+                '978-0133404180': new QueueFIFO([
+                    { userId: '9651', userName: 'Mariana Sarahi Haas Bacab', addedAt: `${today} 09:15:00` },
+                    { userId: '9528', userName: 'Mario Krushev Cardozo Pool', addedAt: `${today} 10:40:00` }
+                ])
+            };
+
+            historyStack = new StackLIFO([
+                {
+                    id: 'OP-05',
+                    type: 'Cola FIFO',
+                    book: 'Data Structures and Algorithm Analysis in C++ (978-0133404180)',
+                    user: 'Mario Krushev Cardozo Pool (9528)',
+                    timestamp: `${today} 10:40:00`,
+                    dateOnly: today,
+                    description: 'Usuario agregado a la posición #2 de la cola de espera FIFO.',
+                    prevState: 'Sin turno',
+                    newState: 'En espera (#2)'
+                },
+                {
+                    id: 'OP-04',
+                    type: 'Cola FIFO',
+                    book: 'Data Structures and Algorithm Analysis in C++ (978-0133404180)',
+                    user: 'Mariana Sarahi Haas Bacab (9651)',
+                    timestamp: `${today} 09:15:00`,
+                    dateOnly: today,
+                    description: 'Usuario agregado al frente (#1) de la cola de espera FIFO.',
+                    prevState: 'Sin turno',
+                    newState: 'En espera (#1)'
+                },
+                {
+                    id: 'OP-03',
+                    type: 'Devolución',
+                    book: 'Clean Code: Manual de Estilo para el Desarrollo Ágil (978-0132350884)',
+                    user: 'Mariana Sarahi Haas Bacab (9651)',
+                    timestamp: `${past5} 16:20:00`,
+                    dateOnly: past5,
+                    description: 'Devolución registrada (A tiempo). Ejemplar reincorporado al catálogo.',
+                    prevState: 'Prestado',
+                    newState: 'Disponible'
+                },
+                {
+                    id: 'OP-02',
+                    type: 'Préstamo',
+                    book: 'Data Structures and Algorithm Analysis in C++ (978-0133404180)',
+                    user: 'Luis Gustavo Moo Pech (9625)',
+                    timestamp: `${past5} 11:05:00`,
+                    dateOnly: past5,
+                    description: `Préstamo registrado con fecha límite ${next7}.`,
+                    prevState: 'Disponible',
+                    newState: 'Prestado'
+                },
+                {
+                    id: 'OP-01',
+                    type: 'Préstamo',
+                    book: 'Introduction to Algorithms (978-0262046305)',
+                    user: 'Eliseo Benjamín Cauich Góngora (9635)',
+                    timestamp: `${past10} 12:30:00`,
+                    dateOnly: past10,
+                    description: `Préstamo registrado con fecha límite ${past2}.`,
+                    prevState: 'Disponible',
+                    newState: 'Prestado'
+                }
+            ]);
+
+            saveState();
+        }
+
+        function initAppState() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                if (!raw) {
+                    loadInitialDemoData();
+                    return;
+                }
+                const parsed = JSON.parse(raw);
+                booksList.fromArray(parsed.books || []);
+                usersList.fromArray(parsed.users || []);
+                loans = parsed.loans || [];
+                returnsLog = parsed.returnsLog || [];
+                waitlists = {};
+                if (parsed.waitlists) {
+                    Object.keys(parsed.waitlists).forEach(isbn => {
+                        waitlists[isbn] = new QueueFIFO(parsed.waitlists[isbn]);
+                    });
+                }
+                historyStack = new StackLIFO(parsed.history || []);
+            } catch (err) {
+                console.error('Error cargando localStorage, restaurando datos demo:', err);
+                loadInitialDemoData();
+            }
+        }
+
+        function recordOperation(type, bookLabel, userLabel, description, prevState = '—', newState = '—') {
+            const timestamp = getNowDateTimeStr();
+            historyStack.push({
+                id: 'OP-' + Date.now().toString().slice(-5),
+                type,
+                book: bookLabel,
+                user: userLabel,
+                timestamp,
+                dateOnly: timestamp.split(' ')[0],
+                description,
+                prevState,
+                newState
+            });
+            saveState();
+        }
+
+        /**
+         * 3. UTILIDADES UI, NAVEGACIÓN, TOASTS Y MODALES
+         */
+        const MODULE_META = {
+            dashboard: { title: 'Panel Principal', subtitle: 'Resumen general, métricas en tiempo real y actividad reciente' },
+            books: { title: 'Gestión de Libros', subtitle: 'Administración dinámica mediante Lista Enlazada Simple' },
+            users: { title: 'Gestión de Usuarios', subtitle: 'Control de lectores, matrículas y estado de membresía' },
+            loans: { title: 'Gestión de Préstamos', subtitle: 'Asignación de ejemplares disponibles y control de plazos' },
+            returns: { title: 'Gestión de Devoluciones', subtitle: 'Recepción de libros, cálculo de retrasos y atención de colas' },
+            waitlist: { title: 'Lista de Espera (Cola FIFO)', subtitle: 'Turnos estrictos Primero en Entrar, Primero en Salir' },
+            history: { title: 'Historial de Operaciones (Pila LIFO)', subtitle: 'Bitácora cronológica inversa con tope en la operación más reciente' },
+            algorithms: { title: 'Búsqueda, Ordenamiento y Estructuras', subtitle: 'Laboratorio algorítmico y arquitectura de datos del sistema' },
+            academic: { title: 'Ficha Académica y Conclusión', subtitle: 'Instituto Tecnológico Superior de Calkiní, Campeche (ITESCAM)' }
+        };
+
+        function navigateTo(moduleId) {
+            document.querySelectorAll('.module-view').forEach(sec => sec.classList.add('hidden'));
+            const target = document.getElementById(`module-${moduleId}`);
+            if (target) target.classList.remove('hidden');
+
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                const isActive = btn.dataset.module === moduleId;
+                btn.className = isActive
+                    ? 'nav-btn w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all bg-blue-600 text-white shadow-sm'
+                    : 'nav-btn w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-800/80 hover:text-white transition-all';
+            });
+
+            const meta = MODULE_META[moduleId] || MODULE_META.dashboard;
+            document.getElementById('header-module-title').textContent = meta.title;
+            document.getElementById('header-module-subtitle').textContent = meta.subtitle;
+
+            toggleSidebar(false);
+            refreshAllViews();
+        }
+
+        function toggleSidebar(open) {
+            const sidebar = document.getElementById('sidebar');
+            const backdrop = document.getElementById('sidebar-backdrop');
+            if (open) {
+                sidebar.classList.remove('-translate-x-full');
+                backdrop.classList.remove('hidden');
+            } else {
+                sidebar.classList.add('-translate-x-full');
+                backdrop.classList.add('hidden');
+            }
+        }
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const styles = {
+                success: 'bg-emerald-900 border-emerald-500 text-emerald-50',
+                warning: 'bg-amber-900 border-amber-500 text-amber-50',
+                error: 'bg-red-900 border-red-500 text-red-50',
+                info: 'bg-navy-900 border-blue-500 text-blue-50'
+            };
+            const icons = {
+                success: '✓',
+                warning: '⚠',
+                error: '✕',
+                info: 'ℹ'
+            };
+
+            const el = document.createElement('div');
+            el.className = `toast-enter pointer-events-auto flex items-start gap-2.5 p-3.5 rounded-xl border-l-4 shadow-xl text-xs font-medium ${styles[type] || styles.info}`;
+            el.innerHTML = `<span class="font-bold text-sm leading-none">${icons[type] || 'ℹ'}</span><span class="leading-relaxed">${escapeHTML(message)}</span>`;
+            container.appendChild(el);
+
+            setTimeout(() => {
+                el.style.opacity = '0';
+                el.style.transform = 'translateX(20px)';
+                el.style.transition = 'all 0.25s ease';
+                setTimeout(() => el.remove(), 250);
+            }, 3600);
+        }
+
+        function openModal(id) {
+            const modal = document.getElementById(id);
+            if (!modal) return;
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeModal(id) {
+            const modal = document.getElementById(id);
+            if (!modal) return;
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        // Cerrar modales con Escape o clic fuera
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                ['book-modal', 'user-modal', 'user-loans-modal', 'confirm-modal', 'fifo-handover-modal'].forEach(closeModal);
+                toggleSidebar(false);
+            }
+        });
+
+        ['book-modal', 'user-modal', 'user-loans-modal', 'confirm-modal', 'fifo-handover-modal'].forEach(id => {
+            const el = document.getElementById(id);
+            el.addEventListener('click', (e) => {
+                if (e.target === el) closeModal(id);
+            });
+        });
+
+        function escapeHTML(str) {
+            return String(str ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        /**
+         * 4. LÓGICA DE MÓDULO 1: DASHBOARD Y ESTADÍSTICAS
+         */
+        function refreshDashboard() {
+            const books = booksList.toArray();
+            const users = usersList.toArray();
+            const activeLoans = loans.filter(l => l.status === 'Activo');
+            const availableBooks = books.filter(b => b.status === 'Disponible');
+            const loanedBooks = books.filter(b => b.status === 'Prestado');
+
+            let totalWaiting = 0;
+            Object.values(waitlists).forEach(q => {
+                totalWaiting += q.toArray().length;
+            });
+
+            // Actualizar tarjetas estadísticas y badges laterales
+            document.getElementById('stat-total-books').textContent = books.length;
+            document.getElementById('stat-available-books').textContent = availableBooks.length;
+            document.getElementById('stat-loaned-books').textContent = loanedBooks.length;
+            document.getElementById('stat-total-users').textContent = users.length;
+            document.getElementById('stat-active-loans').textContent = activeLoans.length;
+            document.getElementById('stat-waitlist-count').textContent = totalWaiting;
+
+            document.getElementById('badge-books').textContent = books.length;
+            document.getElementById('badge-users').textContent = users.length;
+            document.getElementById('badge-active-loans').textContent = activeLoans.length;
+            document.getElementById('badge-waitlist').textContent = totalWaiting;
+            document.getElementById('badge-history').textContent = historyStack.toArray().length;
+
+            // Préstamos recientes
+            const recentLoansEl = document.getElementById('dash-recent-loans');
+            const recentLoans = [...loans].reverse().slice(0, 4);
+            recentLoansEl.innerHTML = recentLoans.length === 0
+                ? '<p class="text-xs text-slate-400 py-3">No hay préstamos registrados.</p>'
+                : recentLoans.map(l => `
+                    <div class="p-3 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between gap-2">
+                        <div class="min-w-0">
+                            <p class="text-xs font-bold text-navy-900 truncate">${escapeHTML(l.bookTitle)}</p>
+                            <p class="text-[11px] text-slate-500 truncate">${escapeHTML(l.userName)} (${escapeHTML(l.userId)}) • Límite: ${l.dueDate}</p>
+                        </div>
+                        <span class="px-2 py-0.5 rounded-full text-[11px] font-semibold shrink-0 ${l.status === 'Activo' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}">${l.status}</span>
+                    </div>
+                `).join('');
+
+            // Devoluciones recientes
+            const recentReturnsEl = document.getElementById('dash-recent-returns');
+            const recentReturns = [...returnsLog].reverse().slice(0, 4);
+            recentReturnsEl.innerHTML = recentReturns.length === 0
+                ? '<p class="text-xs text-slate-400 py-3">Aún no se han registrado devoluciones.</p>'
+                : recentReturns.map(r => `
+                    <div class="p-3 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between gap-2">
+                        <div class="min-w-0">
+                            <p class="text-xs font-bold text-navy-900 truncate">${escapeHTML(r.bookTitle)}</p>
+                            <p class="text-[11px] text-slate-500 truncate">${escapeHTML(r.userName)} • Devuelto: ${r.returnDate}</p>
+                        </div>
+                        <span class="px-2 py-0.5 rounded-full text-[11px] font-semibold shrink-0 ${r.punctuality === 'A tiempo' ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}">${r.punctuality}</span>
+                    </div>
+                `).join('');
+
+            // Libros con mayor demanda
+            const topBooksEl = document.getElementById('dash-top-books');
+            const rankedBooks = [...books]
+                .map(b => ({
+                    ...b,
+                    demand: (b.loanCount || 0) + (waitlists[b.isbn] ? waitlists[b.isbn].toArray().length : 0)
+                }))
+                .sort((a, b) => b.demand - a.demand)
+                .slice(0, 4);
+
+            topBooksEl.innerHTML = rankedBooks.map((b, idx) => `
+                <div class="p-3 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between gap-2">
+                    <div class="flex items-center gap-2.5 min-w-0">
+                        <span class="w-6 h-6 rounded-lg bg-blue-100 text-blue-700 font-mono font-bold text-xs flex items-center justify-center shrink-0">#${idx + 1}</span>
+                        <div class="min-w-0">
+                            <p class="text-xs font-bold text-navy-900 truncate">${escapeHTML(b.title)}</p>
+                            <p class="text-[11px] text-slate-500 truncate">${escapeHTML(b.author)}</p>
+                        </div>
+                    </div>
+                    <span class="text-xs font-mono font-bold text-navy-800 shrink-0">${b.demand} sol.</span>
+                </div>
+            `).join('');
+
+            // Libros con lista de espera
+            const waitBooksEl = document.getElementById('dash-waitlist-books');
+            const activeQueues = Object.entries(waitlists).filter(([, q]) => !q.isEmpty());
+            waitBooksEl.innerHTML = activeQueues.length === 0
+                ? '<p class="text-xs text-slate-400 py-3">Ningún libro tiene usuarios en lista de espera.</p>'
+                : activeQueues.map(([isbn, q]) => {
+                    const book = booksList.findByKey(isbn);
+                    const next = q.peek();
+                    return `
+                        <div class="p-3 rounded-xl bg-purple-50/60 border border-purple-100 flex items-center justify-between gap-2">
+                            <div class="min-w-0">
+                                <p class="text-xs font-bold text-navy-900 truncate">${escapeHTML(book ? book.title : isbn)}</p>
+                                <p class="text-[11px] text-royal-700 truncate">Frente FIFO (#1): <strong>${escapeHTML(next.userName)}</strong></p>
+                            </div>
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-royal-600 text-white shrink-0">${q.toArray().length} en cola</span>
+                        </div>
+                    `;
+                }).join('');
+
+            // Actividad reciente (Tope pila LIFO)
+            const feedEl = document.getElementById('dash-activity-feed');
+            const recentOps = historyStack.toArray().slice(0, 5);
+            feedEl.innerHTML = recentOps.map((op, i) => `
+                <div class="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                    <div class="flex items-start gap-2.5">
+                        ${i === 0 ? '<span class="px-1.5 py-0.5 rounded bg-royal-600 text-white font-mono text-[10px] font-bold shrink-0">TOP</span>' : '<span class="w-2 h-2 rounded-full bg-slate-300 mt-1.5 shrink-0"></span>'}
+                        <div>
+                            <span class="font-bold text-navy-900">[${escapeHTML(op.type)}]</span>
+                            <span class="text-slate-700">${escapeHTML(op.description)}</span>
+                            <span class="block text-[11px] text-slate-400 mt-0.5">Libro: ${escapeHTML(op.book)} • Usuario: ${escapeHTML(op.user)}</span>
+                        </div>
+                    </div>
+                    <span class="font-mono text-[11px] text-slate-400 shrink-0">${op.timestamp}</span>
+                </div>
+            `).join('');
+        }
+
+        /**
+         * 5. LÓGICA DE MÓDULO 2: GESTIÓN DE LIBROS (LISTA ENLAZADA)
+         */
+        function updateBookCategoryFilter() {
+            const select = document.getElementById('books-filter-category');
+            const currentVal = select.value;
+            const categories = [...new Set(booksList.toArray().map(b => b.category))];
+            select.innerHTML = '<option value="all">Todas las categorías</option>' +
+                categories.map(c => `<option value="${escapeHTML(c)}">${escapeHTML(c)}</option>`).join('');
+            if (categories.includes(currentVal)) select.value = currentVal;
+        }
+
+        function renderBooksTable() {
+            updateBookCategoryFilter();
+            const query = document.getElementById('books-search').value.trim().toLowerCase();
+            const statusFilter = document.getElementById('books-filter-status').value;
+            const catFilter = document.getElementById('books-filter-category').value;
+            const sortBy = document.getElementById('books-sort').value;
+
+            let items = booksList.toArray().map((book, idx) => ({ ...book, nodeIndex: idx + 1 }));
+
+            if (query) {
+                items = items.filter(b =>
+                    b.title.toLowerCase().includes(query) ||
+                    b.author.toLowerCase().includes(query) ||
+                    b.isbn.toLowerCase().includes(query)
+                );
+            }
+            if (statusFilter !== 'all') {
+                items = items.filter(b => b.status === statusFilter);
+            }
+            if (catFilter !== 'all') {
+                items = items.filter(b => b.category === catFilter);
+            }
+
+            if (sortBy !== 'default') {
+                items.sort((a, b) => {
+                    if (sortBy === 'title-asc') return a.title.localeCompare(b.title, 'es');
+                    if (sortBy === 'title-desc') return b.title.localeCompare(a.title, 'es');
+                    if (sortBy === 'author-asc') return a.author.localeCompare(b.author, 'es');
+                    if (sortBy === 'isbn-asc') return a.isbn.localeCompare(b.isbn, 'es');
+                    if (sortBy === 'year-desc') return b.year - a.year;
+                    if (sortBy === 'year-asc') return a.year - b.year;
+                    return 0;
+                });
+            }
+
+            const tbody = document.getElementById('books-table-body');
+            if (items.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="py-8 text-center text-sm text-slate-400">No se encontraron libros con los filtros actuales.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = items.map(b => {
+                const isAvail = b.status === 'Disponible';
+                const qLen = waitlists[b.isbn] ? waitlists[b.isbn].toArray().length : 0;
+                return `
+                    <tr class="hover:bg-slate-50/80 transition">
+                        <td class="py-3.5 px-4">
+                            <span class="text-[11px] font-mono font-bold text-blue-600 block">Nodo #${b.nodeIndex}</span>
+                            <span class="text-xs font-mono text-slate-600">${escapeHTML(b.isbn)}</span>
+                        </td>
+                        <td class="py-3.5 px-4">
+                            <p class="font-bold text-navy-900">${escapeHTML(b.title)}</p>
+                            <p class="text-xs text-slate-500">${escapeHTML(b.author)}</p>
+                        </td>
+                        <td class="py-3.5 px-4 hidden md:table-cell">
+                            <span class="px-2 py-0.5 rounded-md text-xs bg-slate-100 text-slate-700 font-medium">${escapeHTML(b.category)}</span>
+                            <span class="block text-xs text-slate-400 mt-0.5">${escapeHTML(b.publisher)}</span>
+                        </td>
+                        <td class="py-3.5 px-4 hidden sm:table-cell text-xs">
+                            <span class="font-semibold text-slate-700">${b.year}</span>
+                            <span class="block text-slate-400">Reg: ${b.registeredAt}</span>
+                        </td>
+                        <td class="py-3.5 px-4">
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${isAvail ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">
+                                <span class="w-1.5 h-1.5 rounded-full ${isAvail ? 'bg-emerald-600' : 'bg-amber-600'}"></span>
+                                ${b.status}
+                            </span>
+                            ${qLen > 0 ? `<span class="block text-[11px] text-royal-600 font-semibold mt-1">${qLen} en espera</span>` : ''}
+                        </td>
+                        <td class="py-3.5 px-4 text-right whitespace-nowrap space-x-1">
+                            <button onclick="openBookModal('${escapeHTML(b.isbn)}')" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-blue-50 hover:bg-blue-100 text-blue-700 transition">Editar</button>
+                            <button onclick="confirmDeleteBook('${escapeHTML(b.isbn)}')" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-red-50 hover:bg-red-100 text-red-700 transition">Eliminar</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function openBookModal(isbn = null) {
+            const form = document.getElementById('book-form');
+            form.reset();
+            document.getElementById('book-edit-original-isbn').value = isbn || '';
+            const isbnInput = document.getElementById('book-isbn-input');
+
+            if (isbn) {
+                const book = booksList.findByKey(isbn);
+                if (!book) return;
+                document.getElementById('book-modal-title').textContent = 'Editar Registro de Libro';
+                document.getElementById('book-title-input').value = book.title;
+                document.getElementById('book-author-input').value = book.author;
+                isbnInput.value = book.isbn;
+                document.getElementById('book-category-input').value = book.category;
+                document.getElementById('book-year-input').value = book.year;
+                document.getElementById('book-publisher-input').value = book.publisher;
+            } else {
+                document.getElementById('book-modal-title').textContent = 'Registrar Nuevo Libro';
+            }
+            openModal('book-modal');
+        }
+
+        function handleSaveBook(e) {
+            e.preventDefault();
+            const originalIsbn = document.getElementById('book-edit-original-isbn').value.trim();
+            const title = document.getElementById('book-title-input').value.trim();
+            const author = document.getElementById('book-author-input').value.trim();
+            const isbn = document.getElementById('book-isbn-input').value.trim();
+            const category = document.getElementById('book-category-input').value.trim();
+            const year = parseInt(document.getElementById('book-year-input').value, 10);
+            const publisher = document.getElementById('book-publisher-input').value.trim();
+
+            if (!title || !author || !isbn || !category || !year || !publisher) {
+                showToast('Todos los campos del libro son obligatorios.', 'error');
+                return;
+            }
+
+            if (originalIsbn) {
+                // Edición
+                if (originalIsbn.toLowerCase() !== isbn.toLowerCase() && booksList.findByKey(isbn)) {
+                    showToast(`El ISBN "${isbn}" ya pertenece a otro libro.`, 'error');
+                    return;
+                }
+                const existing = booksList.findByKey(originalIsbn);
+                booksList.updateByKey(originalIsbn, { title, author, isbn, category, year, publisher });
+                recordOperation(
+                    'Modificación',
+                    `${title} (${isbn})`,
+                    'Administrador',
+                    `Datos bibliográficos actualizados para "${title}".`,
+                    existing.status,
+                    existing.status
+                );
+                showToast(`Libro "${title}" actualizado correctamente.`, 'success');
+            } else {
+                // Registro nuevo
+                if (booksList.findByKey(isbn)) {
+                    showToast(`Error: Ya existe un libro registrado con el ISBN "${isbn}".`, 'error');
+                    return;
+                }
+                booksList.append({
+                    isbn,
+                    title,
+                    author,
+                    category,
+                    year,
+                    publisher,
+                    status: 'Disponible',
+                    registeredAt: getTodayStr(0),
+                    loanCount: 0
+                });
+                recordOperation(
+                    'Registro',
+                    `${title} (${isbn})`,
+                    'Administrador',
+                    `Nuevo nodo insertado en la Lista Enlazada de libros.`,
+                    'Inexistente',
+                    'Disponible'
+                );
+                showToast(`Libro "${title}" registrado en la Lista Enlazada.`, 'success');
+            }
+
+            closeModal('book-modal');
+            refreshAllViews();
+        }
+
+        function confirmDeleteBook(isbn) {
+            const book = booksList.findByKey(isbn);
+            if (!book) return;
+
+            // Validación: no permitir eliminar libros con préstamo activo
+            const hasActiveLoan = loans.some(l => l.isbn === isbn && l.status === 'Activo');
+            if (hasActiveLoan || book.status === 'Prestado') {
+                showToast(`Bloqueado: No se puede eliminar "${book.title}" porque tiene un préstamo activo.`, 'error');
+                return;
+            }
+
+            document.getElementById('confirm-modal-title').textContent = 'Eliminar Libro del Catálogo';
+            document.getElementById('confirm-modal-msg').textContent = `¿Estás seguro de eliminar el nodo correspondiente a "${book.title}" (ISBN: ${book.isbn})? Esta acción no se puede deshacer.`;
+            const btn = document.getElementById('confirm-modal-action-btn');
+            btn.textContent = 'Eliminar Libro';
+            btn.onclick = () => {
+                booksList.removeByKey(isbn);
+                delete waitlists[isbn];
+                recordOperation(
+                    'Eliminación',
+                    `${book.title} (${book.isbn})`,
+                    'Administrador',
+                    `Nodo eliminado de la Lista Enlazada de libros.`,
+                    book.status,
+                    'Eliminado'
+                );
+                closeModal('confirm-modal');
+                refreshAllViews();
+                showToast(`Libro "${book.title}" eliminado correctamente.`, 'warning');
+            };
+            openModal('confirm-modal');
+        }
+
+        /**
+         * 6. LÓGICA DE MÓDULO 3: GESTIÓN DE USUARIOS
+         */
+        function renderUsersTable() {
+            const query = document.getElementById('users-search').value.trim().toLowerCase();
+            const statusFilter = document.getElementById('users-filter-status').value;
+
+            let users = usersList.toArray();
+            if (query) {
+                users = users.filter(u =>
+                    u.name.toLowerCase().includes(query) ||
+                    u.id.toLowerCase().includes(query) ||
+                    u.email.toLowerCase().includes(query)
+                );
+            }
+            if (statusFilter !== 'all') {
+                users = users.filter(u => u.status === statusFilter);
+            }
+
+            const tbody = document.getElementById('users-table-body');
+            if (users.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="py-8 text-center text-sm text-slate-400">No se encontraron usuarios.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = users.map(u => {
+                const activeCount = loans.filter(l => l.userId === u.id && l.status === 'Activo').length;
+                const badgeClass = u.status === 'Activo'
+                    ? 'bg-emerald-100 text-emerald-800'
+                    : (u.status === 'Suspendido' ? 'bg-amber-100 text-amber-800' : 'bg-slate-200 text-slate-700');
+
+                return `
+                    <tr class="hover:bg-slate-50/80 transition">
+                        <td class="py-3.5 px-4 font-mono font-bold text-navy-800 text-xs">${escapeHTML(u.id)}</td>
+                        <td class="py-3.5 px-4">
+                            <p class="font-bold text-navy-900">${escapeHTML(u.name)}</p>
+                            <p class="text-xs text-slate-500">${escapeHTML(u.email)} • ${escapeHTML(u.phone)}</p>
+                        </td>
+                        <td class="py-3.5 px-4 hidden md:table-cell text-xs">
+                            <span class="font-semibold text-slate-700">${escapeHTML(u.type)}</span>
+                            <span class="block text-slate-400">Alta: ${u.registeredAt}</span>
+                        </td>
+                        <td class="py-3.5 px-4">
+                            <span class="px-2.5 py-1 rounded-full text-xs font-bold ${badgeClass}">${escapeHTML(u.status)}</span>
+                        </td>
+                        <td class="py-3.5 px-4 text-center">
+                            <button onclick="viewUserLoans('${escapeHTML(u.id)}')" class="px-2.5 py-1 rounded-lg text-xs font-mono font-bold ${activeCount > 0 ? 'bg-amber-100 text-amber-800 hover:bg-amber-200' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'} transition">
+                                ${activeCount} activo(s)
+                            </button>
+                        </td>
+                        <td class="py-3.5 px-4 text-right whitespace-nowrap space-x-1">
+                            <button onclick="openUserModal('${escapeHTML(u.id)}')" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-blue-50 hover:bg-blue-100 text-blue-700 transition">Editar</button>
+                            <button onclick="confirmDeleteUser('${escapeHTML(u.id)}')" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-red-50 hover:bg-red-100 text-red-700 transition">Eliminar</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function openUserModal(userId = null) {
+            const form = document.getElementById('user-form');
+            form.reset();
+            document.getElementById('user-edit-original-id').value = userId || '';
+
+            if (userId) {
+                const u = usersList.findByKey(userId);
+                if (!u) return;
+                document.getElementById('user-modal-title').textContent = 'Editar Información de Usuario';
+                document.getElementById('user-name-input').value = u.name;
+                document.getElementById('user-id-input').value = u.id;
+                document.getElementById('user-email-input').value = u.email;
+                document.getElementById('user-phone-input').value = u.phone;
+                document.getElementById('user-type-input').value = u.type;
+                document.getElementById('user-status-input').value = u.status;
+            } else {
+                document.getElementById('user-modal-title').textContent = 'Registrar Nuevo Usuario';
+            }
+            openModal('user-modal');
+        }
+
+        function handleSaveUser(e) {
+            e.preventDefault();
+            const originalId = document.getElementById('user-edit-original-id').value.trim();
+            const name = document.getElementById('user-name-input').value.trim();
+            const id = document.getElementById('user-id-input').value.trim();
+            const email = document.getElementById('user-email-input').value.trim();
+            const phone = document.getElementById('user-phone-input').value.trim();
+            const type = document.getElementById('user-type-input').value;
+            const status = document.getElementById('user-status-input').value;
+
+            if (!name || !id || !email || !phone) {
+                showToast('Todos los campos del usuario son obligatorios.', 'error');
+                return;
+            }
+
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                showToast('El formato del correo electrónico no es válido.', 'error');
+                return;
+            }
+
+            if (originalId) {
+                if (originalId.toLowerCase() !== id.toLowerCase() && usersList.findByKey(id)) {
+                    showToast(`La matrícula "${id}" ya está asignada a otro usuario.`, 'error');
+                    return;
+                }
+                const prev = usersList.findByKey(originalId);
+                usersList.updateByKey(originalId, { name, id, email, phone, type, status });
+                recordOperation(
+                    'Modificación',
+                    '—',
+                    `${name} (${id})`,
+                    `Perfil de usuario actualizado (${type}, membresía ${status}).`,
+                    prev.status,
+                    status
+                );
+                showToast(`Usuario "${name}" actualizado.`, 'success');
+            } else {
+                if (usersList.findByKey(id)) {
+                    showToast(`Error: La matrícula "${id}" ya se encuentra registrada.`, 'error');
+                    return;
+                }
+                usersList.append({
+                    id,
+                    name,
+                    email,
+                    phone,
+                    type,
+                    status,
+                    registeredAt: getTodayStr(0)
+                });
+                recordOperation(
+                    'Registro',
+                    '—',
+                    `${name} (${id})`,
+                    `Nuevo usuario (${type}) agregado a la Lista Enlazada.`,
+                    'Inexistente',
+                    status
+                );
+                showToast(`Usuario "${name}" registrado exitosamente.`, 'success');
+            }
+
+            closeModal('user-modal');
+            refreshAllViews();
+        }
+
+        function viewUserLoans(userId) {
+            const user = usersList.findByKey(userId);
+            if (!user) return;
+            document.getElementById('user-loans-modal-title').textContent = `Préstamos de ${user.name} (${user.id})`;
+            const userLoans = loans.filter(l => l.userId === userId);
+            const body = document.getElementById('user-loans-modal-body');
+
+            if (userLoans.length === 0) {
+                body.innerHTML = '<p class="text-xs text-slate-500 py-4 text-center">Este usuario no registra préstamos activos ni históricos.</p>';
+            } else {
+                body.innerHTML = userLoans.map(l => `
+                    <div class="p-3 rounded-xl border border-slate-200 flex items-center justify-between gap-2 text-xs">
+                        <div>
+                            <p class="font-bold text-navy-900">${escapeHTML(l.bookTitle)}</p>
+                            <p class="text-slate-500">ISBN: ${escapeHTML(l.isbn)} • Límite: ${l.dueDate}</p>
+                        </div>
+                        <span class="px-2 py-0.5 rounded-full font-bold ${l.status === 'Activo' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}">${l.status}</span>
+                    </div>
+                `).join('');
+            }
+            openModal('user-loans-modal');
+        }
+
+        function confirmDeleteUser(userId) {
+            const user = usersList.findByKey(userId);
+            if (!user) return;
+
+            const pendingLoans = loans.filter(l => l.userId === userId && l.status === 'Activo');
+            if (pendingLoans.length > 0) {
+                showToast(`Bloqueado: "${user.name}" tiene ${pendingLoans.length} préstamo(s) pendiente(s) de devolución.`, 'error');
+                return;
+            }
+
+            document.getElementById('confirm-modal-title').textContent = 'Eliminar Usuario';
+            document.getElementById('confirm-modal-msg').textContent = `¿Deseas eliminar a ${user.name} (Matrícula: ${user.id}) del padrón de la biblioteca?`;
+            const btn = document.getElementById('confirm-modal-action-btn');
+            btn.textContent = 'Eliminar Usuario';
+            btn.onclick = () => {
+                usersList.removeByKey(userId);
+                Object.values(waitlists).forEach(q => q.removeUser(userId));
+                recordOperation(
+                    'Eliminación',
+                    '—',
+                    `${user.name} (${user.id})`,
+                    'Usuario eliminado de la Lista Enlazada del padrón.',
+                    user.status,
+                    'Eliminado'
+                );
+                closeModal('confirm-modal');
+                refreshAllViews();
+                showToast(`Usuario "${user.name}" eliminado.`, 'warning');
+            };
+            openModal('confirm-modal');
+        }
+
+        /**
+         * 7. LÓGICA DE MÓDULO 4: GESTIÓN DE PRÉSTAMOS
+         */
+        function refreshLoansModule() {
+            const userSelect = document.getElementById('loan-user-select');
+            const bookSelect = document.getElementById('loan-book-select');
+            const users = usersList.toArray();
+            const books = booksList.toArray();
+
+            userSelect.innerHTML = '<option value="">-- Selecciona un usuario --</option>' +
+                users.map(u => `<option value="${escapeHTML(u.id)}">${escapeHTML(u.id)} - ${escapeHTML(u.name)} (${u.status})</option>`).join('');
+
+            bookSelect.innerHTML = '<option value="">-- Selecciona un libro --</option>' +
+                books.map(b => `<option value="${escapeHTML(b.isbn)}">[${b.status.toUpperCase()}] ${escapeHTML(b.title)} (${escapeHTML(b.isbn)})</option>`).join('');
+
+            if (!document.getElementById('loan-date').value) {
+                document.getElementById('loan-date').value = getTodayStr(0);
+            }
+            if (!document.getElementById('loan-due-date').value) {
+                document.getElementById('loan-due-date').value = getTodayStr(7);
+            }
+
+            // Tarjetas de libros disponibles rápidos
+            const avail = books.filter(b => b.status === 'Disponible');
+            document.getElementById('loans-available-badge').textContent = avail.length;
+            const quickEl = document.getElementById('loans-quick-books');
+            quickEl.innerHTML = avail.length === 0
+                ? '<p class="text-xs text-slate-400">No hay libros disponibles en este momento.</p>'
+                : avail.map(b => `
+                    <button type="button" onclick="selectBookForLoan('${escapeHTML(b.isbn)}')" class="w-full text-left p-3 rounded-xl border border-slate-200 hover:border-blue-500 hover:bg-blue-50/40 transition flex items-center justify-between gap-2">
+                        <div class="min-w-0">
+                            <p class="text-xs font-bold text-navy-900 truncate">${escapeHTML(b.title)}</p>
+                            <p class="text-[11px] text-slate-500 truncate">${escapeHTML(b.author)} • ${escapeHTML(b.isbn)}</p>
+                        </div>
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 shrink-0">Elegir</span>
+                    </button>
+                `).join('');
+
+            checkSelectedBookAvailability();
+        }
+
+        function selectBookForLoan(isbn) {
+            document.getElementById('loan-book-select').value = isbn;
+            checkSelectedBookAvailability();
+        }
+
+        function checkSelectedBookAvailability() {
+            const isbn = document.getElementById('loan-book-select').value;
+            const box = document.getElementById('loan-unavailable-box');
+            const submitBtn = document.getElementById('loan-submit-btn');
+
+            if (!isbn) {
+                box.classList.add('hidden');
+                submitBtn.disabled = false;
+                submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                return;
+            }
+
+            const book = booksList.findByKey(isbn);
+            if (book && book.status === 'Prestado') {
+                const activeLoan = loans.find(l => l.isbn === isbn && l.status === 'Activo');
+                const qLen = waitlists[isbn] ? waitlists[isbn].toArray().length : 0;
+                document.getElementById('loan-unavailable-msg').textContent =
+                    `Actualmente prestado a ${activeLoan ? activeLoan.userName : 'otro lector'}. Personas esperando en cola FIFO: ${qLen}.`;
+                box.classList.remove('hidden');
+                submitBtn.disabled = true;
+                submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            } else {
+                box.classList.add('hidden');
+                submitBtn.disabled = false;
+                submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+        }
+
+        function enqueueFromLoanForm() {
+            const userId = document.getElementById('loan-user-select').value;
+            const isbn = document.getElementById('loan-book-select').value;
+            if (!userId || !isbn) {
+                showToast('Selecciona primero un usuario y el libro prestado.', 'warning');
+                return;
+            }
+            addUserToBookWaitlist(isbn, userId);
+        }
+
+        function handleCreateLoan(e) {
+            e.preventDefault();
+            const userId = document.getElementById('loan-user-select').value;
+            const isbn = document.getElementById('loan-book-select').value;
+            const loanDate = document.getElementById('loan-date').value;
+            const dueDate = document.getElementById('loan-due-date').value;
+
+            if (!userId || !isbn || !loanDate || !dueDate) {
+                showToast('Completa todos los campos del préstamo.', 'error');
+                return;
+            }
+
+            const user = usersList.findByKey(userId);
+            const book = booksList.findByKey(isbn);
+            if (!user || !book) return;
+
+            if (user.status !== 'Activo') {
+                showToast(`El usuario ${user.name} tiene membresía "${user.status}" y no puede solicitar préstamos.`, 'error');
+                return;
+            }
+
+            if (book.status === 'Prestado') {
+                showToast('Este libro ya está prestado. Agrégalo a la lista de espera FIFO.', 'warning');
+                return;
+            }
+
+            if (dueDate < loanDate) {
+                showToast('La fecha límite de devolución no puede ser anterior a la fecha de préstamo.', 'error');
+                return;
+            }
+
+            // Ejecutar préstamo
+            booksList.updateByKey(isbn, {
+                status: 'Prestado',
+                loanCount: (book.loanCount || 0) + 1
+            });
+
+            loans.push({
+                id: 'PREST-' + Math.floor(1000 + Math.random() * 9000),
+                isbn: book.isbn,
+                bookTitle: book.title,
+                userId: user.id,
+                userName: user.name,
+                loanDate,
+                dueDate,
+                returnDate: null,
+                status: 'Activo',
+                punctuality: null
+            });
+
+            // Si el usuario estaba en la cola de espera de este libro, retirarlo
+            if (waitlists[isbn]) {
+                waitlists[isbn].removeUser(user.id);
+            }
+
+            recordOperation(
+                'Préstamo',
+                `${book.title} (${book.isbn})`,
+                `${user.name} (${user.id})`,
+                `Préstamo autorizado desde ${loanDate} hasta ${dueDate}.`,
+                'Disponible',
+                'Prestado'
+            );
+
+            showToast(`Préstamo registrado: "${book.title}" asignado a ${user.name}.`, 'success');
+            refreshAllViews();
+        }
+
+        /**
+         * 8. LÓGICA DE MÓDULO 5: GESTIÓN DE DEVOLUCIONES
+         */
+        function renderReturnsTable() {
+            const query = document.getElementById('returns-search').value.trim().toLowerCase();
+            const today = getTodayStr(0);
+
+            let activeLoans = loans.filter(l => l.status === 'Activo');
+            if (query) {
+                activeLoans = activeLoans.filter(l =>
+                    l.userName.toLowerCase().includes(query) ||
+                    l.userId.toLowerCase().includes(query) ||
+                    l.bookTitle.toLowerCase().includes(query) ||
+                    l.isbn.toLowerCase().includes(query)
+                );
+            }
+
+            const tbody = document.getElementById('returns-table-body');
+            if (activeLoans.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-sm text-slate-400">No hay préstamos activos pendientes de devolución.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = activeLoans.map(l => {
+                const isLate = today > l.dueDate;
+                const qLen = waitlists[l.isbn] ? waitlists[l.isbn].toArray().length : 0;
+
+                return `
+                    <tr class="hover:bg-slate-50/80 transition">
+                        <td class="py-3.5 px-4">
+                            <p class="font-bold text-navy-900">${escapeHTML(l.bookTitle)}</p>
+                            <span class="text-xs font-mono text-slate-500">${escapeHTML(l.isbn)}</span>
+                        </td>
+                        <td class="py-3.5 px-4">
+                            <p class="font-semibold text-slate-800">${escapeHTML(l.userName)}</p>
+                            <span class="text-xs font-mono text-blue-600">Matrícula: ${escapeHTML(l.userId)}</span>
+                        </td>
+                        <td class="py-3.5 px-4 hidden sm:table-cell text-xs">
+                            <span class="block text-slate-500">Salida: ${l.loanDate}</span>
+                            <span class="font-bold ${isLate ? 'text-red-600' : 'text-slate-700'}">Límite: ${l.dueDate}</span>
+                        </td>
+                        <td class="py-3.5 px-4 space-y-1">
+                            <span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold ${isLate ? 'bg-red-100 text-red-800' : 'bg-emerald-100 text-emerald-800'}">
+                                ${isLate ? 'Con retraso' : 'En tiempo'}
+                            </span>
+                            ${qLen > 0 ? `<span class="block text-[11px] font-bold text-royal-600">⚠ ${qLen} usuario(s) en cola FIFO</span>` : ''}
+                        </td>
+                        <td class="py-3.5 px-4 text-right">
+                            <button onclick="processBookReturn('${escapeHTML(l.id)}')" class="px-3.5 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-2xs transition">
+                                Registrar Devolución
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function processBookReturn(loanId) {
+            const loan = loans.find(l => l.id === loanId && l.status === 'Activo');
+            if (!loan) return;
+
+            const today = getTodayStr(0);
+            const punctuality = today <= loan.dueDate ? 'A tiempo' : 'Con retraso';
+
+            loan.status = 'Devuelto';
+            loan.returnDate = today;
+            loan.punctuality = punctuality;
+
+            booksList.updateByKey(loan.isbn, { status: 'Disponible' });
+
+            returnsLog.push({
+                loanId: loan.id,
+                isbn: loan.isbn,
+                bookTitle: loan.bookTitle,
+                userId: loan.userId,
+                userName: loan.userName,
+                dueDate: loan.dueDate,
+                returnDate: today,
+                punctuality
+            });
+
+            recordOperation(
+                'Devolución',
+                `${loan.bookTitle} (${loan.isbn})`,
+                `${loan.userName} (${loan.userId})`,
+                `Libro devuelto el ${today} (${punctuality}).`,
+                'Prestado',
+                'Disponible'
+            );
+
+            refreshAllViews();
+            showToast(`Devolución registrada (${punctuality}): "${loan.bookTitle}" ahora está Disponible.`, punctuality === 'A tiempo' ? 'success' : 'warning');
+
+            // Verificar si existe lista de espera FIFO para este libro
+            const queue = waitlists[loan.isbn];
+            if (queue && !queue.isEmpty()) {
+                const nextInLine = queue.peek();
+                document.getElementById('fifo-modal-title').textContent = `Asignar "${loan.bookTitle}"`;
+                document.getElementById('fifo-modal-msg').innerHTML =
+                    `El ejemplar devuelto tiene <strong>${queue.toArray().length} usuario(s)</strong> en lista de espera.<br><br>` +
+                    `Siguiente en el frente FIFO (#1): <strong>${escapeHTML(nextInLine.userName)}</strong> (Matrícula: ${escapeHTML(nextInLine.userId)}). ¿Deseas asignarle el préstamo automáticamente ahora?`;
+
+                const assignBtn = document.getElementById('fifo-assign-now-btn');
+                assignBtn.onclick = () => {
+                    closeModal('fifo-handover-modal');
+                    attendFirstInWaitlist(loan.isbn);
+                };
+                openModal('fifo-handover-modal');
+            }
+        }
+
+        /**
+         * 9. LÓGICA DE MÓDULO 6: LISTA DE ESPERA (COLA FIFO)
+         */
+        function refreshWaitlistModule() {
+            const bookSelect = document.getElementById('waitlist-book-select');
+            const userSelect = document.getElementById('waitlist-user-select');
+
+            const loanedBooks = booksList.toArray().filter(b => b.status === 'Prestado');
+            const users = usersList.toArray();
+
+            bookSelect.innerHTML = loanedBooks.length === 0
+                ? '<option value="">-- No hay libros prestados --</option>'
+                : '<option value="">-- Selecciona libro prestado --</option>' +
+                  loanedBooks.map(b => `<option value="${escapeHTML(b.isbn)}">${escapeHTML(b.title)} (${escapeHTML(b.isbn)})</option>`).join('');
+
+            userSelect.innerHTML = '<option value="">-- Selecciona usuario --</option>' +
+                users.map(u => `<option value="${escapeHTML(u.id)}">${escapeHTML(u.id)} - ${escapeHTML(u.name)}</option>`).join('');
+
+            const container = document.getElementById('waitlist-queues-container');
+            const entries = Object.entries(waitlists).filter(([, q]) => !q.isEmpty());
+
+            if (entries.length === 0) {
+                container.innerHTML = `
+                    <div class="bg-white rounded-2xl border border-slate-200 p-8 text-center space-y-2">
+                        <p class="text-sm font-bold text-navy-900">No hay usuarios en listas de espera</p>
+                        <p class="text-xs text-slate-500">Cuando un libro esté prestado, los usuarios solicitantes se formarán aquí en orden estricto FIFO.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = entries.map(([isbn, queue]) => {
+                const book = booksList.findByKey(isbn);
+                const list = queue.toArray();
+                const isBookAvailable = book && book.status === 'Disponible';
+
+                return `
+                    <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-2xs space-y-4">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs font-mono font-bold text-royal-600">${escapeHTML(isbn)}</span>
+                                    <span class="px-2 py-0.5 rounded-full text-[11px] font-bold ${isBookAvailable ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">
+                                        ${book ? book.status : 'Prestado'}
+                                    </span>
+                                </div>
+                                <h4 class="text-base font-bold text-navy-900 mt-0.5">${escapeHTML(book ? book.title : isbn)}</h4>
+                            </div>
+                            ${isBookAvailable ? `
+                                <button onclick="attendFirstInWaitlist('${escapeHTML(isbn)}')" class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs transition">
+                                    Atender al #1 (Dequeue & Prestar)
+                                </button>
+                            ` : `
+                                <span class="text-xs text-slate-400 font-medium">Esperando devolución del ejemplar</span>
+                            `}
+                        </div>
+
+                        <div class="space-y-2">
+                            ${list.map((entry, idx) => `
+                                <div class="p-3 rounded-xl border ${idx === 0 ? 'bg-purple-50/70 border-purple-300' : 'bg-slate-50 border-slate-200'} flex items-center justify-between gap-3">
+                                    <div class="flex items-center gap-3 min-w-0">
+                                        <span class="w-7 h-7 rounded-lg ${idx === 0 ? 'bg-royal-600 text-white' : 'bg-slate-200 text-slate-700'} font-mono font-bold text-xs flex items-center justify-center shrink-0">
+                                            #${idx + 1}
+                                        </span>
+                                        <div class="min-w-0">
+                                            <div class="flex items-center gap-2">
+                                                <p class="text-xs font-bold text-navy-900 truncate">${escapeHTML(entry.userName)}</p>
+                                                ${idx === 0 ? '<span class="px-1.5 py-0.2 rounded text-[10px] font-bold bg-royal-600 text-white">FRENTE FIFO</span>' : ''}
+                                            </div>
+                                            <p class="text-[11px] text-slate-500 font-mono">Matrícula: ${escapeHTML(entry.userId)} • Ingreso: ${entry.addedAt}</p>
+                                        </div>
+                                    </div>
+                                    <button onclick="removeFromWaitlist('${escapeHTML(isbn)}', '${escapeHTML(entry.userId)}')" class="px-2.5 py-1 rounded-lg text-xs font-semibold text-red-600 hover:bg-red-50 transition shrink-0">
+                                        Retirar
+                                    </button>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function addUserToBookWaitlist(isbn, userId) {
+            const book = booksList.findByKey(isbn);
+            const user = usersList.findByKey(userId);
+            if (!book || !user) return;
+
+            if (user.status !== 'Activo') {
+                showToast(`El usuario ${user.name} no tiene membresía activa.`, 'error');
+                return;
+            }
+
+            // Verificar si el usuario ya tiene prestado este mismo libro
+            const currentlyHolding = loans.some(l => l.isbn === isbn && l.userId === userId && l.status === 'Activo');
+            if (currentlyHolding) {
+                showToast(`${user.name} ya tiene este libro prestado actualmente.`, 'warning');
+                return;
+            }
+
+            if (!waitlists[isbn]) {
+                waitlists[isbn] = new QueueFIFO();
+            }
+
+            const added = waitlists[isbn].enqueue({
+                userId: user.id,
+                userName: user.name,
+                addedAt: getNowDateTimeStr()
+            });
+
+            if (!added) {
+                showToast(`${user.name} ya se encuentra formado en la lista de espera de este libro.`, 'warning');
+                return;
+            }
+
+            const pos = waitlists[isbn].toArray().length;
+            recordOperation(
+                'Cola FIFO',
+                `${book.title} (${book.isbn})`,
+                `${user.name} (${user.id})`,
+                `Usuario encolado en posición #${pos} de la lista de espera.`,
+                'Sin turno',
+                `En espera (#${pos})`
+            );
+
+            refreshAllViews();
+            showToast(`${user.name} agregado a la cola FIFO en posición #${pos}.`, 'success');
+        }
+
+        function handleAddToWaitlist(e) {
+            e.preventDefault();
+            const isbn = document.getElementById('waitlist-book-select').value;
+            const userId = document.getElementById('waitlist-user-select').value;
+            if (!isbn || !userId) {
+                showToast('Selecciona un libro prestado y un usuario.', 'error');
+                return;
+            }
+            addUserToBookWaitlist(isbn, userId);
+        }
+
+        function removeFromWaitlist(isbn, userId) {
+            const queue = waitlists[isbn];
+            const book = booksList.findByKey(isbn);
+            const user = usersList.findByKey(userId);
+            if (!queue) return;
+
+            queue.removeUser(userId);
+            recordOperation(
+                'Cola FIFO',
+                book ? `${book.title} (${isbn})` : isbn,
+                user ? `${user.name} (${userId})` : userId,
+                'Usuario retirado manualmente de la cola de espera.',
+                'En espera',
+                'Retirado'
+            );
+            refreshAllViews();
+            showToast('Usuario retirado de la cola de espera.', 'info');
+        }
+
+        function attendFirstInWaitlist(isbn) {
+            const book = booksList.findByKey(isbn);
+            const queue = waitlists[isbn];
+            if (!book || !queue || queue.isEmpty()) return;
+
+            if (book.status !== 'Disponible') {
+                showToast('El libro aún no ha sido devuelto.', 'warning');
+                return;
+            }
+
+            const nextUser = queue.dequeue();
+            const loanDate = getTodayStr(0);
+            const dueDate = getTodayStr(7);
+
+            booksList.updateByKey(isbn, {
+                status: 'Prestado',
+                loanCount: (book.loanCount || 0) + 1
+            });
+
+            loans.push({
+                id: 'PREST-' + Math.floor(1000 + Math.random() * 9000),
+                isbn: book.isbn,
+                bookTitle: book.title,
+                userId: nextUser.userId,
+                userName: nextUser.userName,
+                loanDate,
+                dueDate,
+                returnDate: null,
+                status: 'Activo',
+                punctuality: null
+            });
+
+            recordOperation(
+                'Préstamo',
+                `${book.title} (${book.isbn})`,
+                `${nextUser.userName} (${nextUser.userId})`,
+                `Atendido automáticamente desde el frente de la Cola FIFO (Dequeue). Límite: ${dueDate}.`,
+                'En espera (#1)',
+                'Prestado'
+            );
+
+            refreshAllViews();
+            showToast(`¡Turno FIFO atendido! "${book.title}" asignado a ${nextUser.userName}.`, 'success');
+        }
+
+        /**
+         * 10. LÓGICA DE MÓDULO 7: HISTORIAL DE OPERACIONES (PILA LIFO)
+         */
+        function renderHistoryStack() {
+            const typeFilter = document.getElementById('history-filter-type').value;
+            const dateFilter = document.getElementById('history-filter-date').value;
+            const userFilter = document.getElementById('history-filter-user').value.trim().toLowerCase();
+            const bookFilter = document.getElementById('history-filter-book').value.trim().toLowerCase();
+
+            let ops = historyStack.toArray();
+            if (typeFilter !== 'all') ops = ops.filter(o => o.type === typeFilter);
+            if (dateFilter) ops = ops.filter(o => o.dateOnly === dateFilter);
+            if (userFilter) ops = ops.filter(o => o.user.toLowerCase().includes(userFilter));
+            if (bookFilter) ops = ops.filter(o => o.book.toLowerCase().includes(bookFilter));
+
+            const container = document.getElementById('history-stack-container');
+            if (ops.length === 0) {
+                container.innerHTML = '<div class="bg-white rounded-2xl border border-slate-200 p-8 text-center text-sm text-slate-400">No hay operaciones registradas que coincidan con los filtros.</div>';
+                return;
+            }
+
+            const badgeColors = {
+                'Préstamo': 'bg-amber-100 text-amber-800',
+                'Devolución': 'bg-emerald-100 text-emerald-800',
+                'Registro': 'bg-blue-100 text-blue-800',
+                'Modificación': 'bg-sky-100 text-sky-800',
+                'Eliminación': 'bg-red-100 text-red-800',
+                'Cola FIFO': 'bg-purple-100 text-royal-800'
+            };
+
+            container.innerHTML = ops.map((op, idx) => `
+                <div class="bg-white rounded-2xl border ${idx === 0 ? 'border-royal-600 ring-2 ring-purple-100' : 'border-slate-200'} p-4 sm:p-5 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div class="space-y-1.5">
+                        <div class="flex flex-wrap items-center gap-2">
+                            ${idx === 0 ? '<span class="px-2 py-0.5 rounded bg-royal-600 text-white font-mono text-[10px] font-bold">TOPE DE LA PILA (LIFO)</span>' : `<span class="text-xs font-mono text-slate-400">#${ops.length - idx}</span>`}
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold ${badgeColors[op.type] || 'bg-slate-100 text-slate-700'}">${escapeHTML(op.type)}</span>
+                            <span class="text-xs font-mono text-slate-500">${op.timestamp}</span>
+                        </div>
+                        <p class="text-sm font-bold text-navy-900">${escapeHTML(op.description)}</p>
+                        <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-600">
+                            <span><strong>Libro:</strong> ${escapeHTML(op.book)}</span>
+                            <span><strong>Usuario:</strong> ${escapeHTML(op.user)}</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 text-xs font-mono bg-slate-50 px-3 py-2 rounded-xl border border-slate-200 shrink-0 self-start md:self-center">
+                        <span class="text-slate-500">${escapeHTML(op.prevState)}</span>
+                        <span class="text-blue-600 font-bold">→</span>
+                        <span class="font-bold text-navy-900">${escapeHTML(op.newState)}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        /**
+         * 11. LÓGICA DE MÓDULO 8: LABORATORIO DE BÚSQUEDA Y ORDENAMIENTO
+         */
+        function runSearchExperiment() {
+            const algo = document.getElementById('algo-search-type').value;
+            const field = document.getElementById('algo-search-field').value;
+            const query = document.getElementById('algo-search-query').value.trim();
+            const output = document.getElementById('algo-search-output');
+
+            if (!query) {
+                showToast('Escribe un término de búsqueda para ejecutar el algoritmo.', 'warning');
+                return;
+            }
+
+            const books = booksList.toArray();
+            const res = algo === 'binary'
+                ? SearchAlgorithms.binarySearch(books, field, query)
+                : SearchAlgorithms.linearSearch(books, field, query);
+
+            output.innerHTML = `
+                <p class="text-emerald-400 font-bold">✓ Algoritmo: ${algo === 'binary' ? 'Búsqueda Binaria O(log n)' : 'Búsqueda Lineal O(n)'} | Comparaciones: ${res.comparisons}</p>
+                <p class="text-amber-300">Resultados encontrados: ${res.matches.length}</p>
+                <div class="border-t border-slate-700 pt-2 space-y-1 text-[11px] text-slate-300 max-h-36 overflow-y-auto">
+                    ${res.steps.map(s => `<div>${escapeHTML(s)}</div>`).join('')}
+                </div>
+            `;
+        }
+
+        function runSortExperiment() {
+            const method = document.getElementById('algo-sort-method').value;
+            const criteria = document.getElementById('algo-sort-criteria').value;
+            const output = document.getElementById('algo-sort-output');
+            const books = booksList.toArray();
+
+            let res;
+            if (method === 'quicksort') res = SortAlgorithms.quickSort(books, criteria);
+            else if (method === 'insertion') res = SortAlgorithms.insertionSort(books, criteria);
+            else res = SortAlgorithms.bubbleSort(books, criteria);
+
+            output.innerHTML = `
+                <p class="text-amber-400 font-bold">✓ Método: ${method.toUpperCase()} | Comparaciones/Movimientos: ${res.operations}</p>
+                <div class="border-t border-slate-700 pt-2 space-y-1 text-[11px]">
+                    ${res.sorted.map((b, i) => `
+                        <div class="text-slate-200">${i + 1}. <span class="text-blue-400">[${b.year}]</span> ${escapeHTML(b.title)} — <span class="text-slate-400">${escapeHTML(b.author)} (${b.status})</span></div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        /**
+         * 12. SINCRONIZACIÓN GENERAL DE TODAS LAS VISTAS
+         */
+        function refreshAllViews() {
+            refreshDashboard();
+            renderBooksTable();
+            renderUsersTable();
+            refreshLoansModule();
+            renderReturnsTable();
+            refreshWaitlistModule();
+            renderHistoryStack();
+        }
+
+        // Inicializar aplicación al cargar DOM
+        window.addEventListener('DOMContentLoaded', () => {
+            initAppState();
+            refreshAllViews();
+        });
+    </script>
+</body>
+</html>
